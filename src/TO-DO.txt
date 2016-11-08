@@ -1,0 +1,70 @@
+Rosinty is ROS Package that connects different Virtual Realty Hardware Platforms to ROS via a Webserver, letting Unity either create the shared enviornment, or enhance the real one of the agents. ROS allows for control and planning of robotic movements, while Unity provides a platform for virtual/mixed reality environments and supports different VR platforms.
+
+===================
+PIPELINE COMPONENTS
+===================
+
+Unity:
+    Unity can be written in both C#, UnityScript (Unity version of Javascript), and Boo (tastes like Python). Virtual Reality are best suited for C#, so prefer to do as much in C# as possible. But UnityScript may be better for grabbing/parsing info, then just feeding that into C# scripts.
+
+	TO-DO:
+	- Create script to read rosUnity node from webserver live.
+	- Translate rosUnity info into Unity Game Object/Enviornment
+		- Baxter URDF -> Unity Game Object
+	- Track user using virtual reality hardware
+	- Push user data to webserver
+	* Path Visualization
+		- Have robot model visualize planned trajectory before actually doing it
+	* Teleoperation
+		- Create interface for user to control robot's joint angles/grippers
+	* "Shared Screen" Enviornment
+		- Visualize Kinect point cloud from Rosinty into enviornment
+		- Visualize video stream from Baxter's cameras into enviornment
+
+(Could use Unreal Engine to connect to Virtual Reality Hardware in addition to Unity)
+
+
+Webserver(brown website):
+	- Get data pushed from Unity
+	- Push data from Unity to ROS network
+
+Rosinty Package:
+	- Create package to work with MoveIt!,Kinect Data, and other depedencies in CMakeList of rosUnity
+	- Listen to Webserver for user data
+	- Create dynamic enviornment in MoveIt! to use depth sensor/kinect for object modeling
+	- Standardize XML Messages for different types of robots, virtual reality platforms, and tasks (Different ROS nodes?). Make Webserver and Unity script match XML format.
+		- Document how to write XML 
+	- Create bash script to launch all necessary parts of the pipeline on Rosinity's side
+	- Create models of objects in MoveIt! to plan around
+		- Connect these objects to objects in Unity live
+	* Path Visualization
+		- Send trajectories over webserver	
+	* Teleoperation
+		- Translate listened user data into joint controls over robot 
+	* "Shared Screen" Enviornment
+		- Find best way to format point clouds to send over webserver to be read by virtual reality client
+
+
+Virtual Reality:
+	* Occulus:
+		- Connect to Unity
+	* HoloLense
+		- Connect to Unity
+	* Google Cardboard
+		- Connect to Unity
+	* HTC Vive:
+		- Connect to Unity
+		- Implement Steam VR
+		- Implement VR_Tool Kit
+		- Read raw IR sensor from base stations. (Could track things in persons enviornments with IR and use as well)
+
+
+
+Name ideas for package:
+	- Rosinty
+	- ROS Reality
+
+
+
+Other Projects:
+	- SLUG implementation into Unity Enviornment for Virtual Reality
