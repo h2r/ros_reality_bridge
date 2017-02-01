@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import rospy
 import roslib
 import moveit_msgs.msg
