@@ -34,9 +34,6 @@ class unityNode:
 				self.linkDict[link] = (trans, rot, True)
 
 		while not rospy.is_shutdown():
-			#for link in self.tfListener.getFrameStrings():
-			#	if 'reference' not in link:
-			#		self.getTransform(link)
 			for link in self.linkDict:
 				self.getTransform(link)
 			pubString = self.messageBuilder()
@@ -54,7 +51,6 @@ class unityNode:
 		#print msg
 		return msg
 
-	
 
 	def lGripper_callback(self,message):
 		self.lGripperS = float(message.position)

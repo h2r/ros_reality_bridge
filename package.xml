@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <package>
-  <name>ros_reality</name>
-  <version>0.0.0</version>
-  <description>The ros_reality package</description>
+  <name>ros_reality_bridge</name>
+  <version>0.3.1</version>
+  <description>The ros_reality_bridge package</description>
 
   <!-- One maintainer tag required, multiple allowed, one person per tag --> 
   <!-- Example:  -->
@@ -47,7 +47,7 @@
   <run_depend>baxter_core_msgs</run_depend>
   <run_depend>rospy</run_depend>
   <run_depend>std_msgs</run_depend>
-
+  <run_depend>rosbridge_server</run_depend>
 
   <!-- The export tag contains other, unspecified, tags -->
   <export>
