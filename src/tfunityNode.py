@@ -2,8 +2,7 @@
 
 import rospy
 import roslib
-import moveit_msgs.msg
-import numpy as np
+
 from std_msgs.msg import String
 from baxter_core_msgs.msg import EndEffectorState
 from baxter_core_msgs.msg import JointCommand
@@ -70,9 +69,6 @@ class unityNode:
 			except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException, tf.Exception):
 				return
 			old_trans, old_rot, _ = self.linkDict[link]
-			#if np.subtract(trans, old_trans).any() > 0.00 or np.subtract(rot, old_rot).any() > 0.01:
 			self.linkDict[link] = (trans, rot, True)
-			#else:
-			#	self.linkDict[link] = (old_trans, old_rot, False)
 
 uN = unityNode()

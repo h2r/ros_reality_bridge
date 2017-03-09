@@ -1,11 +1,10 @@
 <launch>
 <arg name="launch_kinect" default="true" />
-<node name="web_republisher" pkg="tf2_web_republisher" type="tf2_web_republisher" />
 <include file="$(find rosbridge_server)/launch/rosbridge_websocket.launch" />
 
 <group if="$(arg launch_kinect)">
 
-<!--<include file="$(find kinect_baxter_calibration)/launch/publish_calibration.launch" />-->
+<include file="$(find kinect_baxter_calibration)/launch/publish_calibration.launch" />
 <include file="$(find kinect2_bridge)/launch/kinect2_bridge.launch">
 	<arg name="depth_method" value="cudakde" />
 	<arg name="use_png" value="true" />
