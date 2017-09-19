@@ -12,9 +12,10 @@ import tf
 
 class unityNode:
 	def __init__(self):
+		print "begining node"
 		rospy.init_node("unityNode",anonymous=False)
 
-		self.pub = rospy.Publisher("ros_unity",String,queue_size=10)
+		self.pub = rospy.Publisher("ros_unity",String,queue_size=0)
 		self.rate = rospy.Rate(60)
 
 		self.lGripper = rospy.Subscriber("/robot/end_effector/left_gripper/state",EndEffectorState,self.lGripper_callback)
@@ -34,10 +35,13 @@ class unityNode:
 				self.linkDict[link] = (trans, rot, True)
 
 		while not rospy.is_shutdown():
+			print "before loop"
 			for link in self.linkDict:
 				self.getTransform(link)
+			print "in loop"
 			pubString = self.messageBuilder()
 			self.pub.publish(pubString)
+			print "after loop"
 			self.rate.sleep()
 
 	def messageBuilder(self):
@@ -62,9 +66,11 @@ class unityNode:
 			try:
 				t = self.tfListener.getLatestCommonTime("/base", link)
 				(trans,rot) = self.tfListener.lookupTransform('/base', link, t)
-			except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException, tf.Exception):
+			except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException, tf.Exception) as e:
+				print "hello"
 				return
 			old_trans, old_rot, _ = self.linkDict[link]
 			self.linkDict[link] = (trans, rot, True)
+			print trans, rot
 
 uN = unityNode()
