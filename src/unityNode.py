@@ -1,76 +1,75 @@
 #!/usr/bin/env python
 
 import rospy
-import roslib
-
 from std_msgs.msg import String
-from baxter_core_msgs.msg import EndEffectorState
-from baxter_core_msgs.msg import JointCommand
-from sensor_msgs.msg import JointState
-from sensor_msgs.msg import Image
 import tf
 
-class unityNode:
-	def __init__(self):
-		print "begining node"
-		rospy.init_node("unityNode",anonymous=False)
 
-		self.pub = rospy.Publisher("ros_unity",String,queue_size=0)
-		self.rate = rospy.Rate(60)
+def message_builder(link_dict):
+    """
+    Builds the message to send on the ROS network to the VR computer
 
-		self.lGripper = rospy.Subscriber("/robot/end_effector/left_gripper/state",EndEffectorState,self.lGripper_callback)
-		self.rGripper = rospy.Subscriber("/robot/end_effector/right_gripper/state",EndEffectorState,self.rGripper_callback)
-		self.tfListener = tf.TransformListener()
-		self.lGripperS = 0 
-		self.rGripperS = 0
-
-		trans = (0,0,0)
-		rot = (0,0,0,0)
-
-		rospy.Rate(1).sleep()
-
-		self.linkDict = dict()
-		for link in self.tfListener.getFrameStrings():
-			if 'reference' not in link:
-				self.linkDict[link] = (trans, rot, True)
-
-		while not rospy.is_shutdown():
-			print "before loop"
-			for link in self.linkDict:
-				self.getTransform(link)
-			print "in loop"
-			pubString = self.messageBuilder()
-			self.pub.publish(pubString)
-			print "after loop"
-			self.rate.sleep()
-
-	def messageBuilder(self):
-		msg = ""
-		msg += "left_gripper_grip:"+str(self.lGripperS)+";"
-		msg += "right_gripper_grip:"+str(self.rGripperS)
-		for k,v in self.linkDict.iteritems():
-			trans, rot, pub = v
-			if pub:
-				msg += ';' + k + ':' + str(trans) + str(rot)
-		#print msg
-		return msg
+    Returns:
+        msg (string): the message
+    """
+    msg = ""
+    for k, v in link_dict.iteritems():
+        trans, rot = v
+        trans = [float("{0:.3f}".format(n)) for n in trans]
+        rot = [float("{0:.3f}".format(n)) for n in rot]
+        msg += '{}:{}^{};'.format(k, trans, rot)
+    return msg.replace(' ', '')
 
 
-	def lGripper_callback(self,message):
-		self.lGripperS = float(message.position)
-	def rGripper_callback(self,message):
-		self.rGripperS = float(message.position)
+def get_transform(link, tf_listener):
+    """
+    update the link_dict with the position and rotation (transform) of the link relative to the base of the robot
 
-	def getTransform(self, link):
-		if self.tfListener.frameExists("/base") and self.tfListener.frameExists(link):
-			try:
-				t = self.tfListener.getLatestCommonTime("/base", link)
-				(trans,rot) = self.tfListener.lookupTransform('/base', link, t)
-			except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException, tf.Exception) as e:
-				print "hello"
-				return
-			old_trans, old_rot, _ = self.linkDict[link]
-			self.linkDict[link] = (trans, rot, True)
-			print trans, rot
+    Params:
+        link (string): name of the link to get transform of
+    """
+    try:
+        t = tf_listener.getLatestCommonTime("base", link)
+        (trans, rot) = tf_listener.lookupTransform('base', link, t)
+    except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException, tf.Exception) as e:
+        print e
+        return
+    return trans, rot
 
-uN = unityNode()
+
+def main():
+    # initialize the ROS node
+    rospy.init_node("unityNode", anonymous=False)
+
+    # set up the publisher
+    pub = rospy.Publisher("ros_unity", String, queue_size=0)
+    # set up the tf listener
+    tf_listener = tf.TransformListener()
+
+    # create a rate to sleep after every loop
+    rate = rospy.Rate(60)
+
+    trans = (0, 0, 0)
+    rot = (0, 0, 0, 0)
+
+    # sleep to give time for publishers and listener to initilize
+    rospy.Rate(1).sleep()
+
+    # dictionary to store the position and rotation of each link in the robot
+    link_dict = dict()
+
+    # initialize keys in linkDict
+    for link in tf_listener.getFrameStrings():
+        if 'reference' not in link:
+            link_dict[link] = (trans, rot)
+
+    # main loop. Updates the values for each link in link_dict and publish the values
+    while not rospy.is_shutdown():
+        for link in link_dict:
+            link_dict[link] = get_transform(link, tf_listener)
+        pub_string = message_builder(link_dict)
+        pub.publish(pub_string)
+        rate.sleep()
+
+if __name__ == '__main__':
+    main()

@@ -13,7 +13,7 @@
 
 </group>
 
-<node name="ros_reality_node" pkg="ros_reality" type="unityNode.py" />	
+<node name="ros_reality_node" pkg="ros_reality_bridge" type="unityNode.py" />	
 <node name="right_image_compressor" pkg="image_transport" type="republish" args="raw in:=/cameras/right_hand_camera/image compressed out:=/cameras/right_hand_camera/image_compressed" />
 <node name="left_image_compressor" pkg="image_transport" type="republish" args="raw in:=/cameras/left_hand_camera/image compressed out:=/cameras/left_hand_camera/image_compressed" />
 <param name="/cameras/right_hand_camera/image_compressed/compressed/jpeg_quality" value="80" type="double" />
