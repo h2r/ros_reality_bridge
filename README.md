@@ -1,6 +1,6 @@
-# ROS REALITY
+# ROS REALITY BRIDGE
 
-Hi, and welcome to ROS Reality, a virtual reality teleoperation interface for ROS enabled robots (we use a Baxter, but the code could easily be modified for any ROS robot). This readme contains all the information you need to get started.
+Hi, and welcome to ROS Reality Bridge, a virtual reality teleoperation interface for ROS enabled robots (we use a Baxter, but the code could easily be modified for any ROS robot). This readme contains all the information you need to get started.
 
 ## Overview
 
