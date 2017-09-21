@@ -18,6 +18,7 @@ def message_builder(link_dict):
         trans = [float("{0:.3f}".format(n)) for n in trans]
         rot = [float("{0:.3f}".format(n)) for n in rot]
         msg += '{}:{}^{};'.format(k, trans, rot)
+    # remove spaces to save on space
     return msg.replace(' ', '')
 
 
