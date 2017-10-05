@@ -13,11 +13,12 @@ def state_callback(data):
 
 def main():
     # initialize the ROS node
+    print "hi"
     rospy.init_node("lfdNode", anonymous=False)
 
     # set up the subscriber
-    rospy.Subscriber("demonstrations", String, record_callback)
-    rospy.Subscriber("ein/right/state", String, state_callback)
+    rospy.Subscriber("/demonstrations", String, record_callback)
+    rospy.Subscriber("/ein/right/state", EinState, state_callback)
 
     # create a rate to sleep after every loop
     rate = rospy.Rate(60)
