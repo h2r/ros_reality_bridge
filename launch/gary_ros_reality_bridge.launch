@@ -1,0 +1,5 @@
+<launch>
+<include file="$(find rosbridge_server)/launch/rosbridge_websocket.launch" />
+
+<node name="ros_reality_node" pkg="ros_reality_bridge" type="garyunityNode.py" />	
+</launch>
