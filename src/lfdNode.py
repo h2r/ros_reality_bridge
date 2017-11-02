@@ -5,15 +5,28 @@ from std_msgs.msg import String
 import tf
 from ein.msg import EinState
 
+recordings = []
+
+targ = []
+true = []
+
 def record_callback(data):
-	print hi
+	global recordings
+	recordings.append([targ,true])
+
 
 def state_callback(data):
-	print type(data)
+	global targ, true
+	targ = data.state_string.split("\n")[1].split(":")[1].split(" ")[1:]
+	true = data.state_string.split("\n")[3].split(":")[1].split(" ")[1:]
+
+	targ = [float(i) for i in targ]
+	true = [float(i) for i in true]
+
 
 def main():
+    global recordings
     # initialize the ROS node
-    print "hi"
     rospy.init_node("lfdNode", anonymous=False)
 
     # set up the subscriber
@@ -28,6 +41,10 @@ def main():
 
     while not rospy.is_shutdown():
         rate.sleep()
+
+    thefile = open('test.txt','w')
+    for item in recordings:
+	thefile.write("%s\n" % item)
 
 if __name__ == '__main__':
     main()
