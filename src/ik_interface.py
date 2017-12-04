@@ -21,7 +21,7 @@ def ik_solve(limb, point, quaternion):
             pose=Pose(position=point, orientation=quaternion))}
     ikreq.pose_stamp.append(poses[limb])
     try:
-        #rospy.wait_for_service(ns, 5.0)
+        rospy.wait_for_service(ns, 0.5)
         resp = iksvc(ikreq)
     except (rospy.ServiceException, rospy.ROSException), e:
         rospy.logerr("Service call failed: %s" % (e,))
