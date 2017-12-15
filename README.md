@@ -30,8 +30,12 @@ Great, now this computer is sending information about the ROS network. Go to you
 We suggest using master, but feel free to look at other branches for extensions of this work.
 
 gary-branch: ROS Reality for the PR2
+
 json: Rather than use our custom string format to send robot joint data from ROS to Unity, we format it as a JSON string. If you use this, pull from the json branch on the ROS_Reality github page.
+
 lfd: Branch for performing learning from demonstrations in VR. Pull the associated ROS_reality git branch
+
 multiplayer: Allows for multiple humans to be in the VR scene. 
+
 Nao: ROS Reality for the Nao.
 
