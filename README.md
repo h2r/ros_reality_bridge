@@ -12,6 +12,8 @@ For this tutorial, we will focus on controlling a Baxter robot. Therefore you wi
 
 If you want to send commands back from the Unity computer, we recommend you use Ein, which sits on top of the native Baxter SDK, and gives a higher level of control, like end effector Cartesian coordinate positioning. Download and install it here: http://h2r.github.io/ein/
 
+NOTE: Ein is not needed if you pull from no-ein branch. This directly uses the built in IK solver from the Baxter SDK.
+
 To connect the Kinect to the ROS network, we use IAI Kinect, a ROS package found here: https://github.com/code-iai/iai_kinect2
 
 To calibrate the Kinect, we use this package: https://github.com/ShibataLabPrivate/kinect_baxter_calibration
