@@ -21,7 +21,7 @@ def ik_solve(limb, point, quaternion):
             pose=Pose(position=point, orientation=quaternion))}
     ikreq.pose_stamp.append(poses[limb])
     try:
-        rospy.wait_for_service(ns, 0.5)
+        #rospy.wait_for_service(ns, 0.5)
         resp = iksvc(ikreq)
     except (rospy.ServiceException, rospy.ROSException), e:
         rospy.logerr("Service call failed: %s" % (e,))
@@ -63,7 +63,6 @@ def gripper_handler(limb, msg):
             left_gripper.close()
 
 def pose_request_callback(data):
-    
     # determine limb
     if 'right' in data._connection_header['topic']:
         limb = 'right'
@@ -72,6 +71,7 @@ def pose_request_callback(data):
 
     # get message
     msg = data.data
+    print 'msg:', msg
 
     # call handle ik
     ik_handler(limb, msg)

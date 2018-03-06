@@ -22,6 +22,5 @@
 <node name="left_image_compressor" pkg="image_transport" type="republish" args="raw in:=/cameras/left_hand_camera/image compressed out:=/cameras/left_hand_camera/image_compressed" />
 <param name="/cameras/right_hand_camera/image_compressed/compressed/jpeg_quality" value="80" type="double" />
 <param name="/cameras/left_hand_camera/image_compressed/compressed/jpeg_quality" value="80" type="double" />
-<node name="kinect_color_throttle" pkg="topic_tools" type="throttle" args="messages kinect2/sd/image_color_rect/compressed 10.0" />
-<node name="kinect_depth_throttle" pkg="topic_tools" type="throttle" args="messages kinect2/sd/image_depth_rect 5.0" />
+
 </launch>

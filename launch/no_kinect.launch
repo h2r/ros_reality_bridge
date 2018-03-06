@@ -1,18 +1,6 @@
 <launch>
-<arg name="launch_kinect" default="true" />
 <include file="$(find rosbridge_server)/launch/rosbridge_websocket.launch" />
 
-<group if="$(arg launch_kinect)">
-
-<include file="$(find kinect_baxter_calibration)/launch/publish_calibration.launch" />
-<include file="$(find kinect2_bridge)/launch/kinect2_bridge.launch">
-	<arg name="depth_method" value="cudakde" />
-	<arg name="use_png" value="true" />
-	<arg name="publish_tf" value="true" />
-	<arg name="use_nodelet" value="false" />
-</include>
-
-</group>
 
 <node name="left_gripper_urdf_update_node" pkg="baxter_examples" type="send_urdf_fragment.py" args="-f $(find ros_reality_bridge)/urdf/left_end_effector.xacro -l left_hand -j left_gripper_base" />
 <node name="right_gripper_urdf_update_node" pkg="baxter_examples" type="send_urdf_fragment.py" args="-f $(find ros_reality_bridge)/urdf/right_end_effector.xacro -l right_hand -j right_gripper_base" />
@@ -22,6 +10,4 @@
 <node name="left_image_compressor" pkg="image_transport" type="republish" args="raw in:=/cameras/left_hand_camera/image compressed out:=/cameras/left_hand_camera/image_compressed" />
 <param name="/cameras/right_hand_camera/image_compressed/compressed/jpeg_quality" value="80" type="double" />
 <param name="/cameras/left_hand_camera/image_compressed/compressed/jpeg_quality" value="80" type="double" />
-<node name="kinect_color_throttle" pkg="topic_tools" type="throttle" args="messages kinect2/sd/image_color_rect/compressed 10.0" />
-<node name="kinect_depth_throttle" pkg="topic_tools" type="throttle" args="messages kinect2/sd/image_depth_rect 5.0" />
 </launch>
