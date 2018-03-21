@@ -30,8 +30,8 @@ def get_transform(link, tf_listener):
         link (string): name of the link to get transform of
     """
     try:
-        t = tf_listener.getLatestCommonTime("base", link)
-        (trans, rot) = tf_listener.lookupTransform('base', link, t)
+        t = tf_listener.getLatestCommonTime("world", link)
+        (trans, rot) = tf_listener.lookupTransform('world', link, t)
     except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException, tf.Exception) as e:
         print e
         return

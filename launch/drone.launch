@@ -1,0 +1,5 @@
+<launch>
+<include file="$(find rosbridge_server)/launch/rosbridge_websocket.launch" />
+<node name="ros_reality_node" pkg="ros_reality_bridge" type="unityNode.py" />	
+<node name="drone_image_compressor" pkg="image_transport" type="republish" args="raw in:=/pidrone/picamera/image_raw compressed out:=/pidrone/picamera/image_compressed" />
+</launch>
