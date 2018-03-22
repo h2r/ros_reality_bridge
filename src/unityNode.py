@@ -3,6 +3,7 @@
 import rospy
 from std_msgs.msg import String
 import tf
+import time
 
 
 def message_builder(link_dict):
@@ -29,9 +30,12 @@ def get_transform(link, tf_listener):
     Params:
         link (string): name of the link to get transform of
     """
+    #tf_listener.waitForTransform("map",link,rospy.Time(),rospy.Duration(4.0))
     try:
-        t = tf_listener.getLatestCommonTime("base", link)
-        (trans, rot) = tf_listener.lookupTransform('base', link, t)
+        t = tf_listener.getLatestCommonTime("map", link)
+        #t = rospy.Time.now()
+        #tf_listener.waitForTransform("map",link,t,rospy.Duration(4.0))
+        (trans, rot) = tf_listener.lookupTransform('map', link, t)
     except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException, tf.Exception) as e:
         print e
         return
@@ -63,6 +67,8 @@ def main():
     for link in tf_listener.getFrameStrings():
         if 'reference' not in link:
             link_dict[link] = (trans, rot)
+    time.sleep(1)
+    print "starting"
 
     # main loop. Updates the values for each link in link_dict and publish the values
     while not rospy.is_shutdown():

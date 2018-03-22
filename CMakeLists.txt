@@ -5,7 +5,6 @@ project(ros_reality_bridge)
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
-  baxter_core_msgs
   rospy
   std_msgs
   sensor_msgs
