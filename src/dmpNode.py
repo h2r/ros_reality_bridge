@@ -67,7 +67,7 @@ class LFDHandler(object):
         rospy.loginfo("GOT EOF")
         rospy.loginfo("NUM DATA POINTS: " + str(len(self.traj_data)))
         dims = 3                
-        dt = 1.0                
+        dt = 0.1 #1.0                
         K = 100                 
         D = 2.0 * np.sqrt(K)      
         # num_bases = 4
@@ -87,7 +87,7 @@ class LFDHandler(object):
         seg_length = -1          #Plan until convergence to goal
         tau = 2 * resp.tau       #Desired plan should take twice as long as demo
         dt = 1.0
-        integrate_iter = 5       #dt is rather large, so this is > 1  
+        integrate_iter = 2#5       #dt is rather large, so this is > 1  
         plan = self.makePlanRequest(x_0, x_dot_0, t_0, goal, goal_thresh, 
                                seg_length, tau, dt, integrate_iter)
 
@@ -97,7 +97,7 @@ class LFDHandler(object):
         self.traj_data = []
 
 
-    def onEXE(self):
+    def onEXE(self, x0, g):
         if self.plan == None:
             return
         # case where we are going to publish the motion plan and move the robot
@@ -111,12 +111,13 @@ class LFDHandler(object):
 
 
     def callback(self, data):
-        if data.data == "EOF":
-            self.onEOF()
+        if data == None:
             return
 
         msg = data.data.split()
-        if msg[0] == "EXE":
+        if msg[0] == "EOF":
+            self.onEOF()
+        elif msg[0] == "EXE":
             # case where we want to execute a motion plan
             self.onEXE()
         else:
