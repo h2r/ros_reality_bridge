@@ -7,6 +7,9 @@ import numpy as np
 from dmp.srv import *
 from dmp.msg import *
 
+global traj_data
+traj_data = []
+
 #Learn a DMP from demonstration data
 def makeLFDRequest(dims, traj, dt, K_gain, 
                    D_gain, num_bases):
@@ -58,34 +61,46 @@ def makePlanRequest(x_0, x_dot_0, t_0, goal, goal_thresh,
     return resp;
 
 
-def callback(traj):
-    rospy.loginfo("I heard %s", traj.data)
-    # dims = 2                
-    # dt = 1.0                
-    # K = 100                 
-    # D = 2.0 * np.sqrt(K)      
-    # num_bases = 4          
-    # # traj = [[1.0,1.0],[2.0,2.0],[3.0,4.0],[6.0,8.0]]
-    # resp = makeLFDRequest(dims, traj, dt, K, D, num_bases)
+def onEOF():
+    rospy.loginfo("GOT EOF")
+    rospy.loginfo("NUM DATA POINTS: " + str(len(traj_data)))
+    dims = 3                
+    dt = 1.0                
+    K = 100                 
+    D = 2.0 * np.sqrt(K)      
+    # num_bases = 4
+    num_bases = len(traj_data)          
+    # traj = [[1.0,1.0],[2.0,2.0],[3.0,4.0],[6.0,8.0]]
+    resp = makeLFDRequest(dims, traj_data, dt, K, D, num_bases)
 
-    # #Set it as the active DMP
-    # makeSetActiveRequest(resp.dmp_list)
+    #Set it as the active DMP
+    makeSetActiveRequest(resp.dmp_list)
 
-    # #Now, generate a plan
-    # x_0 = [0.0,0.0]          #Plan starting at a different point than demo 
-    # x_dot_0 = [0.0,0.0]   
-    # t_0 = 0                
-    # goal = [8.0,7.0]         #Plan to a different goal than demo
-    # goal_thresh = [0.2,0.2]
-    # seg_length = -1          #Plan until convergence to goal
-    # tau = 2 * resp.tau       #Desired plan should take twice as long as demo
-    # dt = 1.0
-    # integrate_iter = 5       #dt is rather large, so this is > 1  
-    # plan = makePlanRequest(x_0, x_dot_0, t_0, goal, goal_thresh, 
-    #                        seg_length, tau, dt, integrate_iter)
+    #Now, generate a plan (with same start and end as demonstration)
+    x_0 = traj_data[0]#[0.0,0.0]          #Plan starting at a different point than demo 
+    x_dot_0 = [0.0,0.0,0.0]   
+    t_0 = 0                
+    goal = traj_data[-1] #[8.0,7.0]         #Plan to a different goal than demo
+    goal_thresh = [0.2,0.2,0.2]
+    seg_length = -1          #Plan until convergence to goal
+    tau = 2 * resp.tau       #Desired plan should take twice as long as demo
+    dt = 1.0
+    integrate_iter = 5       #dt is rather large, so this is > 1  
+    plan = makePlanRequest(x_0, x_dot_0, t_0, goal, goal_thresh, 
+                           seg_length, tau, dt, integrate_iter)
 
-    # # publish the plan to sendEinEE to actually automate the robot to move
-    # print plan
+    # publish the plan to sendEinEE to actually automate the robot to move
+    rospy.loginfo(plan)
+    traj_data = []
+
+def callback(data):
+    if data.data == "EOF":
+        onEOF()
+    else:
+        point = data.data.split()
+        traj_data.append([float(dim) for dim in point])
+        rospy.loginfo(str(traj_data))
+    
 
 def main():
     rospy.init_node('dmp_listener')
