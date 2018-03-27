@@ -11,6 +11,7 @@ class LFDHandler(object):
     def __init__(self):
         self.traj_data = []
         self.plan = None
+        self.LFDRequest = None
 
     #Learn a DMP from demonstration data
     def makeLFDRequest(self, dims, traj, dt, K_gain, 
@@ -73,21 +74,28 @@ class LFDHandler(object):
         # num_bases = 4
         num_bases = len(self.traj_data)          
         # traj = [[1.0,1.0],[2.0,2.0],[3.0,4.0],[6.0,8.0]]
-        resp = self.makeLFDRequest(dims, self.traj_data, dt, K, D, num_bases)
+        self.LFDRequest = self.makeLFDRequest(dims, self.traj_data, dt, K, D, num_bases)
 
+        
+
+
+    def onEXE(self, s, g):
         #Set it as the active DMP
-        self.makeSetActiveRequest(resp.dmp_list)
+        if self.LFDRequest == None:
+            return
+
+        self.makeSetActiveRequest(self.LFDRequest.dmp_list)
 
         #Now, generate a plan (with same start and end as demonstration)
-        x_0 = self.traj_data[0]#[0.0,0.0]          #Plan starting at a different point than demo 
+        x_0 = s#[0.0,0.0]          #Plan starting at a different point than demo 
         x_dot_0 = [0.0,0.0,0.0]   
         t_0 = 0                
-        goal = self.traj_data[-1] #[8.0,7.0]         #Plan to a different goal than demo
-        goal_thresh = [0.2,0.2,0.2]
+        goal = g #[8.0,7.0]         #Plan to a different goal than demo
+        goal_thresh = [0.01, 0.01, 0.01]#[0.2,0.2,0.2]
         seg_length = -1          #Plan until convergence to goal
-        tau = 2 * resp.tau       #Desired plan should take twice as long as demo
+        tau = self.LFDRequest.tau       #Desired plan should take as long as demo
         dt = 1.0
-        integrate_iter = 2#5       #dt is rather large, so this is > 1  
+        integrate_iter = 5       #dt is rather large, so this is > 1  
         plan = self.makePlanRequest(x_0, x_dot_0, t_0, goal, goal_thresh, 
                                seg_length, tau, dt, integrate_iter)
 
@@ -96,13 +104,15 @@ class LFDHandler(object):
         rospy.loginfo(plan.plan.points)
         self.traj_data = []
 
-
-    def onEXE(self, x0, g):
         if self.plan == None:
             return
         # case where we are going to publish the motion plan and move the robot
         topic = "/ein/right/forth_commands"
         pub = rospy.Publisher(topic, String, queue_size = 0)
+
+        msg = str(s[0]) + ' ' + str(s[1]) + ' ' + str(s[2]) + ' 0 1 0 0 moveToEEPose' 
+        pub.publish(msg)
+        rospy.sleep(6)
         for dp in self.plan:
             point = dp.positions
             msg = str(point[0]) + ' ' + str(point[1]) + ' ' + str(point[2]) + ' 0 1 0 0 moveToEEPose' 
@@ -119,7 +129,10 @@ class LFDHandler(object):
             self.onEOF()
         elif msg[0] == "EXE":
             # case where we want to execute a motion plan
-            self.onEXE()
+
+            s = [float(msg[i]) for i in xrange(1, 4)]
+            g = [float(msg[i]) for i in xrange(4, 7)]
+            self.onEXE(s, g)
         else:
             # case where a point is getting sent
             self.traj_data.append([float(dim) for dim in msg])
