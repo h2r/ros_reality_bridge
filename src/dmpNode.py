@@ -6,12 +6,14 @@ from std_msgs.msg import String
 import numpy as np
 from dmp.srv import *
 from dmp.msg import *
+from numpy import linspace
 
 class LFDHandler(object):
     def __init__(self):
         self.traj_data = []
         self.plan = None
         self.LFDRequest = None
+        self.curr_loc = None
 
     #Learn a DMP from demonstration data
     def makeLFDRequest(self, dims, traj, dt, K_gain, 
@@ -76,9 +78,6 @@ class LFDHandler(object):
         # traj = [[1.0,1.0],[2.0,2.0],[3.0,4.0],[6.0,8.0]]
         self.LFDRequest = self.makeLFDRequest(dims, self.traj_data, dt, K, D, num_bases)
 
-        
-
-
     def onEXE(self, s, g):
         #Set it as the active DMP
         if self.LFDRequest == None:
@@ -98,27 +97,42 @@ class LFDHandler(object):
         integrate_iter = 5       #dt is rather large, so this is > 1  
         plan = self.makePlanRequest(x_0, x_dot_0, t_0, goal, goal_thresh, 
                                seg_length, tau, dt, integrate_iter)
+        if plan == None:
+            return
 
         # save the parameterized motion plan
         self.plan = plan.plan.points
-        rospy.loginfo(plan.plan.points)
-        self.traj_data = []
-
+        
         if self.plan == None:
             return
+
+
         # case where we are going to publish the motion plan and move the robot
         topic = "/ein/right/forth_commands"
         pub = rospy.Publisher(topic, String, queue_size = 0)
 
-        msg = str(s[0]) + ' ' + str(s[1]) + ' ' + str(s[2]) + ' 0 1 0 0 moveToEEPose' 
-        pub.publish(msg)
-        rospy.sleep(6)
+        # code to linearly get to start position
+        curr_loc = self.curr_loc
+        num_steps = 20
+        x_vec = linspace(curr_loc[0], s[0], num=num_steps)
+        y_vec = linspace(curr_loc[1], s[1], num=num_steps)
+        z_vec = linspace(curr_loc[2], s[2], num=num_steps)
+
+        for i in xrange(len(x_vec)):
+            msg = str(x_vec[i]) + ' ' + str(y_vec[i]) + ' ' + str(z_vec[i]) + ' 0 1 0 0 moveToEEPose' 
+            pub.publish(msg)
+            rospy.sleep(0.2)
+
+        rospy.sleep(2)
+
+        # code to execute the
         for dp in self.plan:
             point = dp.positions
             msg = str(point[0]) + ' ' + str(point[1]) + ' ' + str(point[2]) + ' 0 1 0 0 moveToEEPose' 
             pub.publish(msg)
-            rospy.sleep(0.1)
+            rospy.sleep(0.2)
 
+        self.traj_data = []
 
     def callback(self, data):
         if data == None:
@@ -135,8 +149,8 @@ class LFDHandler(object):
             self.onEXE(s, g)
         else:
             # case where a point is getting sent
-            self.traj_data.append([float(dim) for dim in msg])
-            rospy.loginfo(str(self.traj_data))
+            self.curr_loc = [float(dim) for dim in msg]
+            self.traj_data.append(self.curr_loc)
         
 
     def start(self):
