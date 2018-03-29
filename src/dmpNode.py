@@ -7,13 +7,16 @@ import numpy as np
 from dmp.srv import *
 from dmp.msg import *
 from numpy import linspace
+from dataFilter import DataFilter 
 
 class LFDHandler(object):
     def __init__(self):
         self.traj_data = []
+        self.supports = [] # index of critical points in traj_data
         self.plan = None
         self.LFDRequest = None
         self.curr_loc = None
+
 
     #Learn a DMP from demonstration data
     def makeLFDRequest(self, dims, traj, dt, K_gain, 
@@ -67,16 +70,17 @@ class LFDHandler(object):
 
 
     def onEOF(self):
-        rospy.loginfo("GOT EOF")
-        rospy.loginfo("NUM DATA POINTS: " + str(len(self.traj_data)))
+        # rospy.loginfo("GOT EOF")
+        # rospy.loginfo("NUM DATA POINTS: " + str(len(self.traj_data)))
+        filtered_data = DataFilter().filter(np.array(self.traj_data), np.array(self.supports))
         dims = 3                
         dt = 0.1 #1.0                
         K = 100                 
         D = 2.0 * np.sqrt(K)      
         # num_bases = 4
-        num_bases = len(self.traj_data)          
+        num_bases = len(self.supports)          
         # traj = [[1.0,1.0],[2.0,2.0],[3.0,4.0],[6.0,8.0]]
-        self.LFDRequest = self.makeLFDRequest(dims, self.traj_data, dt, K, D, num_bases)
+        self.LFDRequest = self.makeLFDRequest(dims, filtered_data, dt, K, D, num_bases)
 
     def onEXE(self, s, g):
         #Set it as the active DMP
@@ -93,8 +97,8 @@ class LFDHandler(object):
         goal_thresh = [0.01, 0.01, 0.01]#[0.2,0.2,0.2]
         seg_length = -1          #Plan until convergence to goal
         tau = self.LFDRequest.tau       #Desired plan should take as long as demo
-        dt = 1.0
-        integrate_iter = 5       #dt is rather large, so this is > 1  
+        dt = 0.5
+        integrate_iter = 1       #dt is rather large, so this is > 1  
         plan = self.makePlanRequest(x_0, x_dot_0, t_0, goal, goal_thresh, 
                                seg_length, tau, dt, integrate_iter)
         if plan == None:
@@ -117,7 +121,6 @@ class LFDHandler(object):
         x_vec = linspace(curr_loc[0], s[0], num=num_steps)
         y_vec = linspace(curr_loc[1], s[1], num=num_steps)
         z_vec = linspace(curr_loc[2], s[2], num=num_steps)
-
         for i in xrange(len(x_vec)):
             msg = str(x_vec[i]) + ' ' + str(y_vec[i]) + ' ' + str(z_vec[i]) + ' 0 1 0 0 moveToEEPose' 
             pub.publish(msg)
@@ -125,7 +128,7 @@ class LFDHandler(object):
 
         rospy.sleep(2)
 
-        # code to execute the
+        # code to execute the motion plan
         for dp in self.plan:
             point = dp.positions
             msg = str(point[0]) + ' ' + str(point[1]) + ' ' + str(point[2]) + ' 0 1 0 0 moveToEEPose' 
@@ -149,8 +152,11 @@ class LFDHandler(object):
             self.onEXE(s, g)
         else:
             # case where a point is getting sent
-            self.curr_loc = [float(dim) for dim in msg]
+            assert len(msg) == 4
+            self.curr_loc = [float(dim) for dim in msg[:-1]]
             self.traj_data.append(self.curr_loc)
+            if float(msg[-1]) == 1:
+                self.supports.append(len(self.traj_data) - 1)
         
 
     def start(self):
