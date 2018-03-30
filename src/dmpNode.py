@@ -20,6 +20,7 @@ class LFDHandler(object):
         
         # start / end points for each skill (note end of i-th is start of i+1-th)
         self.endpoints = []
+        self.gripper_cmds = []
 
         # the lfd requests for all the skills
         self.LFDRequests = []
@@ -28,9 +29,6 @@ class LFDHandler(object):
         self.curr_loc = None
 
         self.pub = rospy.Publisher("/ein/right/forth_commands", String, queue_size = 0)
-
-
-
 
     #Learn a DMP from demonstration data
     def makeLFDRequest(self, dims, traj, dt, K_gain, 
@@ -95,7 +93,6 @@ class LFDHandler(object):
             msg = str(x_vec[i]) + ' ' + str(y_vec[i]) + ' ' + str(z_vec[i]) + ' 0 1 0 0 moveToEEPose' 
             self.pub.publish(msg)
             rospy.sleep(0.2)
-
         rospy.sleep(2)
 
     def onEOS(self):
@@ -123,7 +120,7 @@ class LFDHandler(object):
         x_dot_0 = [0.0,0.0,0.0]   
         t_0 = 0                
         goal = self.endpoints[skill_num+1] #[8.0,7.0]         #Plan to a different goal than demo
-        goal_thresh = [0.01, 0.01, 0.01]#[0.2,0.2,0.2]
+        goal_thresh = [0.001, 0.001, 0.001]#[0.2,0.2,0.2]
         seg_length = -1          #Plan until convergence to goal
         tau = self.LFDRequests[skill_num].tau       #Desired plan should take as long as demo
         dt = 0.5
@@ -146,6 +143,14 @@ class LFDHandler(object):
             self.pub.publish(msg)
             rospy.sleep(0.2)
 
+    def interpGripperCommand(self, cmd):
+        if cmd not in xrange(-1, 2):
+            assert False
+        if cmd == 1: # case where we should open (should really use better style here...)
+            self.pub.publish('openGripper')
+        elif cmd == 0:
+            self.pub.publish('closeGripper')
+
     def callback(self, data):
         if data == None:
             return
@@ -153,16 +158,19 @@ class LFDHandler(object):
         if msg[0] == "EXE":
             # case where we want to execute a motion plan
             data = msg[1:]
-            assert len(data) % 3 == 0 # x,y,z for each point
-            num_endpoints = len(data)/3
+            assert len(data) % 4 == 0 # x,y,z,gripper_cmd for each point
+            num_endpoints = len(data)/4
             assert num_endpoints > 1
-
-            for i in xrange(0, len(data), 3):
+            for i in xrange(0, len(data), 4):
                 self.endpoints.append([float(data[j]) for j in xrange(i, i+3)])
+                self.gripper_cmds.append(int(data[i+3]))
             self.moveToGlobalStart()
             assert len(self.endpoints)-1 == len(self.traj_data)
+            self.interpGripperCommand(self.gripper_cmds[0])
             for i in xrange(len(self.traj_data)):
                 self.onEXE(i) # sets active LFD and executes plan
+                rospy.sleep(1)
+                self.interpGripperCommand(self.gripper_cmds[i+1])
                 rospy.sleep(2)
         elif msg[0] == "EOS": # end of skill
             if len(self.curr_skill_data) != 0:
