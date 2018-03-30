@@ -144,7 +144,7 @@ class LFDHandler(object):
             rospy.sleep(0.2)
 
     def interpGripperCommand(self, cmd):
-        if cmd not in xrange(-1, 2):
+        if cmd not in xrange(0, 3):
             assert False
         if cmd == 1: # case where we should open (should really use better style here...)
             self.pub.publish('openGripper')
