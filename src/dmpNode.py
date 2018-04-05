@@ -90,12 +90,15 @@ class LFDHandler(object):
         y_vec = linspace(curr_loc[1], start[1], num=num_steps)
         z_vec = linspace(curr_loc[2], start[2], num=num_steps)
         for i in xrange(len(x_vec)):
+            self.curr_loc = [x_vec[i], y_vec[i], z_vec[i]]
             msg = str(x_vec[i]) + ' ' + str(y_vec[i]) + ' ' + str(z_vec[i]) + ' 0 1 0 0 moveToEEPose' 
             self.pub.publish(msg)
             rospy.sleep(0.2)
         rospy.sleep(2)
 
     def onEOS(self):
+        if len(self.curr_skill_data) == 0:
+            return
         filtered_data = DataFilter().filter(np.array(self.curr_skill_data), np.array(self.curr_skill_supports))
         dims = 3                
         dt = 0.1 #1.0                
@@ -139,6 +142,7 @@ class LFDHandler(object):
         # code to execute the motion plan
         for dp in plan:
             point = dp.positions
+            self.curr_loc = point
             msg = str(point[0]) + ' ' + str(point[1]) + ' ' + str(point[2]) + ' 0 1 0 0 moveToEEPose' 
             self.pub.publish(msg)
             rospy.sleep(0.2)
@@ -161,11 +165,13 @@ class LFDHandler(object):
             assert len(data) % 4 == 0 # x,y,z,gripper_cmd for each point
             num_endpoints = len(data)/4
             assert num_endpoints > 1
+            self.endpoints = []
+            self.gripper_cmds = []
             for i in xrange(0, len(data), 4):
                 self.endpoints.append([float(data[j]) for j in xrange(i, i+3)])
                 self.gripper_cmds.append(int(data[i+3]))
             self.moveToGlobalStart()
-            assert len(self.endpoints)-1 == len(self.traj_data)
+            assert len(self.endpoints)-1 == len(self.LFDRequests)
             self.interpGripperCommand(self.gripper_cmds[0])
             for i in xrange(len(self.traj_data)):
                 self.onEXE(i) # sets active LFD and executes plan

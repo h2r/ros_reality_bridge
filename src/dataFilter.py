@@ -15,11 +15,12 @@ class DataFilter(object):
 		z = data[:,2]
 		t = np.arange(num_points)
 		sigma = np.ones(num_points)
-		sigma[[supports]] = 0.01
+		if len(supports) > 0:
+			sigma[[supports]] = 0.01
 		# p1, _ = optimize.curve_fit(self.f, x, y, (0,) * (num_points + 1) , sigma=sigma)
 		# p2, _ = optimize.curve_fit(self.f, x, y, (0,) * (num_points + 1))
 		# plt.plot(x, y, "o")
-		degrees = max((len(supports) + 1), 10)
+		degrees = min((len(supports) + 1), min(num_points, 10))
 		guesses = (0, ) * degrees
 		x_fit, _ = optimize.curve_fit(self.f, t, x, guesses, sigma=sigma)
 		y_fit, _ = optimize.curve_fit(self.f, t, y, guesses, sigma=sigma)
