@@ -1,0 +1,2 @@
+geometry_msgs/Pose left_arm
+geometry_msgs/Pose right_arm
