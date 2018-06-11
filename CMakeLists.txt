@@ -108,6 +108,7 @@ catkin_package(
 #  LIBRARIES rosUnity
 #  CATKIN_DEPENDS baxter_common baxter_core_msgs rospy std_msgs geometry_msgs message_runtime
 #  DEPENDS system_lib
+#  msg/MoveitTarget.msg
 )
 
 ###########

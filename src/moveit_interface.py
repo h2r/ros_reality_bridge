@@ -6,89 +6,71 @@ from std_msgs.msg import String
 import moveit_msgs.msg
 import geometry_msgs.msg
 from ros_reality_bridge.msg import MoveitTarget
-import sys
-import copy
 from moveit_msgs.msg import RobotState
 from sensor_msgs.msg import JointState
-from std_msgs.msg import Header
+import sys
 
 moveit_commander.roscpp_initialize(sys.argv)
 rospy.init_node('move_group_python_interface', anonymous=True)
 robot = moveit_commander.RobotCommander()
 scene = moveit_commander.PlanningSceneInterface()
 group = moveit_commander.MoveGroupCommander('right_arm')
-plans = []
-#group = moveit_commander.MoveGroupCommander('both_arms') # 'both_arms'
+# group = moveit_commander.MoveGroupCommander('both_arms') # 'both_arms'
+
+get_prev_id = {}
+get_next_id = {}
+get_pose = {}
+first_movable_point_id = None
+# plans = {}
 
 
 def send_plan_request(data):
   print data
-  #group.set_pose_target(data)
-  
 
-  # def set_start_state(self, msg):
-  #        """
-  #        Specify a start state for the group.
-  #        Parameters
-  #        ----------
-  #        msg : moveit_msgs/RobotState
-  #        Examples
-  #        --------
-  #        >>> from moveit_msgs.msg import RobotState
-  #        >>> from sensor_msgs.msg import JointState
-  #        >>> joint_state = JointState()
-  #        >>> joint_state.header = Header()
-  #        >>> joint_state.header.stamp = rospy.Time.now()
-  #        >>> joint_state.name = ['joint_a', 'joint_b']
-  #        >>> joint_state.position = [0.17, 0.34]
-  #        >>> moveit_robot_state = RobotState()
-  #        >>> moveit_robot_state.joint_state = joint_state
-  #        >>> group.set_start_state(moveit_robot_state)
-  #        """
+  if data.id in get_pose: # case where we are moving a point
+    get_pose[data.id] = data.right_arm
 
-# right_arm: 
-#   position: 
-#     x: 0.77
-#     y: -0.311
-#     z: 0.2146
-#   orientation: 
-#     x: 1.0
-#     y: 0.0
-#     z: 0.0
-#     w: 0.0
+  else: # case where we are getting a new point
+    if data.next_id != "" and data.prev_id != "": # case where the point is sandwiched
+      get_prev_id[data.id] = data.prev_id
+      get_next_id[data.prev_id] = data.id
+      get_next_id[data.id] = data.next_id
+      get_prev_id[data.next_id] = data.id
+      get_pose[data.id] = data.right_arm
 
 
+    # elif data.next_id != "": # has next but not prev (so start point)
+    #   # should only happen once
+    #   start_id = data.id
+    #   get_pose[data.id] = data.right_arm
+    #   get_prev_id[data.id] = None
+    #   if data.next_id not in get_pose:
+    #     return # case where we only have one point in the map, which is the start point
 
+    elif data.prev_id != "": # case where you are at the end of the trajectory
+      if data.prev_id == "START":
+        first_movable_point_id = data.id
+      get_prev_id[data.id] = data.prev_id
+      get_next_id[data.prev_id] = data.id
+      get_next_id[data.id] = None
+      get_pose[data.id] = data.right_arm
+
+    else:
+      assert False
 
   waypoints = []
-  #waypoints.append(group.get_current_pose().pose)
-  waypoints.append(copy.deepcopy(data.right_arm))
-  end = geometry_msgs.msg.Pose()
-  end.orientation.x = 1.0
-  end.position.x = 0.74
-  end.position.y = -0.158
-  end.position.z = 0.3636
-  waypoints.append(copy.deepcopy(end))
-  print waypoints
+  if first_movable_point_id == None:
+    return
+
+  # create the motion plan
+  curr_id = first_movable_point_id
+  
+  while curr_id != None:
+    waypoints.append(copy.deepcopy(get_pose[curr_id]))
+    curr_id = get_next_id[curr_id]
+
   (plan, fraction) = group.compute_cartesian_path(waypoints, 0.01, 0.0)
 
-  # joint_state = JointState()
-  # joint_state.header = Header()
-  # joint_state.header.stamp = rospy.Time.now()
-  # joint_state.name = ['right_s0', 'right_s1', 'right_e0', 'right_e1', 'right_w0', 'right_w1', 'right_w2']
-  # joint_state.position = [1.0748969631559835, -0.9011896944735679, -0.43517805553141176, 1.0331483510678539, 0.26593922628719313, 1.4965526530896336, 3.059]
-  # moveit_robot_state = RobotState()
-  # moveit_robot_state.joint_state = joint_state
-  # group = moveit_commander.MoveGroupCommander('right_arm')
-  # group.set_start_state(moveit_robot_state)
-  # group.set_pose_target(data.right_arm, 'right_gripper')
-  # group.set_planning_time(1.0)
-  # plans.append(group)
-  # for g in plans:
-  #   g.plan()
-  #   rospy.sleep(5.0)
-  #plan = group.plan()
-  #print plan
 
 def move_to_goal(data):
   group.go(wait=True)
