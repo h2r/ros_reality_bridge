@@ -22,22 +22,29 @@ class PlanHandler(object):
     rospy.init_node('move_group_python_interface', anonymous=True)
     robot = moveit_commander.RobotCommander()
     scene = moveit_commander.PlanningSceneInterface()
+
     self.group = moveit_commander.MoveGroupCommander('right_arm')
-    # group = moveit_commander.MoveGroupCommander('both_arms') # 'both_arms'
-    self.get_prev_id = {}
-    self.get_next_id = {}
-    self.get_pose = {}
-    self.get_gripper_state = {}
-    self.first_movable_point_id = None
+    self.get_prev_id = {} # id to prev id in sequence
+    self.get_next_id = {} # id to next id in sequence
+    self.get_angles = {} # id to pose of the arm in said state
+    self.get_pose = {} # id to end effector pose
+
+    self.get_gripper_state = {} # id to 1/0 gripper open
+    self.get_plan = {} # id to the motion plan that ends in getting to id pose
+    self.first_movable_point_id = None # pointer to the first moveable point in the sequence of waypoints
+    self.names = [] # names of the joints of the rob
+
     self.ik_fail_pub = rospy.Publisher('ros_reality_ik_status', String, queue_size=0)
+    self.gripper_pub = rospy.Publisher("/ein/right/forth_commands", String, queue_size = 0)
 
   def send_plan_request(self, data):
-    print data
+    # print data
     msg = data.id.data
     if msg == "": # case where we are closing the client and need to erase the data associated w/ sesh
       self.initializer()
     limb_joints = self.ik_solve_right(data.right_arm)
     
+    # check that the pose is allowable
     if limb_joints == 0:
       print "fail"
       msg = msg + " FAIL"
@@ -47,60 +54,78 @@ class PlanHandler(object):
       msg = msg + " SUCCESS"
       self.ik_fail_pub.publish(msg)
 
-
-    if data.id.data in self.get_pose: # case where we are moving a point
-      self.get_pose[data.id.data] = data.right_arm
+    # case where we are adding a point
+    if data.id.data not in self.get_pose:
+      self.network_point(data)
+    else:
       self.get_gripper_state[data.id.data] = data.right_open.data
+      self.get_pose[data.id.data] = data.right_arm
 
-    else: # case where we are getting a new point
-      if data.next_id.data != "" and data.prev_id.data != "": # case where the point is sandwiched
-        self.get_prev_id[data.id.data] = data.prev_id.data
-        self.get_next_id[data.prev_id.data] = data.id.data
-        self.get_next_id[data.id.data] = data.next_id.data
-        self.get_prev_id[data.next_id.data] = data.id.data
-        self.get_pose[data.id.data] = data.right_arm
-        self.get_gripper_state[data.id.data] = data.right_open.data
+    #planning part of the function
+    if self.get_prev_id[data.id.data] == "START":
+      self.group.set_start_state_to_current_state()
+    else:
+      self.set_start_pose(self.get_prev_id[data.id.data])
 
-      elif data.prev_id.data != "": # case where you are at the end of the trajectory
-        # glself.first_movable_point_id
-        if data.prev_id.data == "START":
-          self.first_movable_point_id = data.id.data
-        self.get_prev_id[data.id.data] = data.prev_id.data
-        self.get_next_
-id[data.prev_id.data] = data.id.data
-        self.get_next_id[data.id.data] = None
-        self.get_pose[data.id.data] = data.right_arm
-        self.get_gripper_state[data.id.data] = data.right_open.data
-
-      else:
-        assert False
-
-    waypoints = []
-    #waypoints.append(self.group.get_current_pose().pose)
-    if self.first_movable_point_id == None:
-      return
-
-    # create the motion plan
-    curr_id = self.first_movable_point_id
-    
-    while curr_id != None:
-      waypoints.append(copy.deepcopy(self.get_pose[curr_id]))
-      curr_id = self.get_next_id[curr_id]
-    self.group = moveit_commander.MoveGroupCommander('right_arm')
+    #self.group = moveit_commander.MoveGroupCommander('right_arm')
     self.group.set_planning_time(2.0)
-    print waypoints
-    (plan, fraction) = self.group.compute_cartesian_path(waypoints, 0.01, 0.0)
+    (plan, fraction) = self.group.compute_cartesian_path([data.right_arm], 0.01, 0.0)
     print plan
 
+    if data.prev_id.data == "START":
+      self.names = plan.joint_trajectory.joint_names # populate names field
+    self.get_plan[data.id.data] = plan
+
+    # grab the last point of the plan
+    self.get_angles[data.id.data] = plan.joint_trajectory.points[-1].positions
+
+    if self.get_next_id[data.id.data] != None: # case where there is a point after to move
+      self.set_start_pose(data.id.data)
+      self.group.set_planning_time(2.0)
+      (plan, fraction) = self.group.compute_cartesian_path([self.get_pose[self.get_next_id[data.id.data]]], 0.01, 0.0)
+      self.get_plan[self.get_next_id[data.id.data]] = plan
 
   def move_to_goal(self, data):
-    # global master_plan
-    # if master_plan != None:
-    #   group.execute(master_plan)
-    # else:
-    #   return
-    return
+    curr = self.first_movable_point_id
+    while curr != None:
+      self.group.execute(self.get_plan[curr])
+      print self.get_gripper_state[curr]
+      if self.get_gripper_state[curr] == "1":
+        print "I am here"
+        self.gripper_pub.publish('openGripper')
+      else:
+        self.gripper_pub.publish('closeGripper')
+      curr = self.get_next_id[curr]
     
+  def set_start_pose(self, id_data):
+    joint_state = JointState()
+    joint_state.header = Header()
+    joint_state.header.stamp = rospy.Time.now()
+    assert len(self.names) != 0
+    joint_state.name = self.names
+    joint_state.position = self.get_angles[id_data]
+    moveit_robot_state = RobotState()
+    moveit_robot_state.joint_state = joint_state
+    self.group.set_start_state(moveit_robot_state)
+
+  def network_point(self, data):
+    self.get_gripper_state[data.id.data] = data.right_open.data
+    self.get_pose[data.id.data] = data.right_arm
+    if data.prev_id.data != "":
+      if data.prev_id.data == "START":
+        self.get_prev_id[data.id.data] = "START"
+        self.first_movable_point_id = data.id.data
+      else:
+        self.get_next_id[data.prev_id.data] = data.id.data
+        self.get_prev_id[data.id.data] = data.prev_id.data
+
+    if data.next_id.data != "":
+      self.get_prev_id[data.next_id.data] = data.id.data
+      self.get_next_id[data.id.data] = data.next_id.data
+    else:
+      self.get_next_id[data.id.data] = None
+
+
   def ik_solve_right(self, p):
     ns = "ExternalTools/" + "right" + "/PositionKinematicsNode/IKService"
     iksvc = rospy.ServiceProxy(ns, SolvePositionIK)
@@ -129,7 +154,6 @@ id[data.prev_id.data] = data.id.data
 
 if __name__ == '__main__':
   try:
-    #main()
     handler = PlanHandler()
     handler.start()
   except rospy.ROSInterruptException:
