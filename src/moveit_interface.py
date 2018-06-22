@@ -5,8 +5,8 @@ import moveit_commander
 from std_msgs.msg import String, Header
 import moveit_msgs.msg
 from geometry_msgs.msg import PoseStamped, Pose, Point, Quaternion
-from ros_reality_bridge.msg import MoveitTarget
-from moveit_msgs.msg import RobotState
+from ros_reality_bridge.msg import MoveitTarget, MoveitPlan
+from moveit_msgs.msg import RobotState, DisplayTrajectory
 from sensor_msgs.msg import JointState
 import sys
 import copy
@@ -36,11 +36,13 @@ class PlanHandler(object):
 
     self.ik_fail_pub = rospy.Publisher('ros_reality_ik_status', String, queue_size=0)
     self.gripper_pub = rospy.Publisher("/ein/right/forth_commands", String, queue_size = 0)
+    self.plan_pub = rospy.Publisher("ros_reality_motion_plan", MoveitPlan, queue_size = 0)
 
   def send_plan_request(self, data):
     # print data
     msg = data.id.data
     if msg == "": # case where we are closing the client and need to erase the data associated w/ sesh
+      print "RESET"
       self.initializer()
     limb_joints = self.ik_solve_right(data.right_arm)
     
@@ -70,8 +72,8 @@ class PlanHandler(object):
     #self.group = moveit_commander.MoveGroupCommander('right_arm')
     self.group.set_planning_time(2.0)
     (plan, fraction) = self.group.compute_cartesian_path([data.right_arm], 0.01, 0.0)
+    self.publish_plan(plan, data.id)
     print plan
-
     if data.prev_id.data == "START":
       self.names = plan.joint_trajectory.joint_names # populate names field
     self.get_plan[data.id.data] = plan
@@ -83,15 +85,21 @@ class PlanHandler(object):
       self.set_start_pose(data.id.data)
       self.group.set_planning_time(2.0)
       (plan, fraction) = self.group.compute_cartesian_path([self.get_pose[self.get_next_id[data.id.data]]], 0.01, 0.0)
+      self.publish_plan(plan, data.id)
       self.get_plan[self.get_next_id[data.id.data]] = plan
 
   def move_to_goal(self, data):
+    print "hi!!"
     curr = self.first_movable_point_id
+
     while curr != None:
-      self.group.execute(self.get_plan[curr])
+      self.group.set_start_state_to_current_state()
+      self.group.set_planning_time(2.0)
+      (plan, fraction) = self.group.compute_cartesian_path([self.get_pose[curr]], 0.01, 0.0)
+      self.group.execute(plan)
       print self.get_gripper_state[curr]
+      rospy.sleep(0.8)
       if self.get_gripper_state[curr] == "1":
-        print "I am here"
         self.gripper_pub.publish('openGripper')
       else:
         self.gripper_pub.publish('closeGripper')
@@ -125,6 +133,14 @@ class PlanHandler(object):
     else:
       self.get_next_id[data.id.data] = None
 
+  def publish_plan(self, plan, end_id):
+    msg = MoveitPlan()
+    msg.id = end_id
+    msg.plan = plan
+    self.plan_pub.publish(msg)
+
+  def print_data(self, data):
+    print data
 
   def ik_solve_right(self, p):
     ns = "ExternalTools/" + "right" + "/PositionKinematicsNode/IKService"

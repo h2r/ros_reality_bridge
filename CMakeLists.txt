@@ -11,6 +11,7 @@ find_package(catkin REQUIRED COMPONENTS
   sensor_msgs
   geometry_msgs
   message_generation
+  moveit_msgs
 )
 
 ## System dependencies are found with CMake's conventions
@@ -50,6 +51,7 @@ find_package(catkin REQUIRED COMPONENTS
 add_message_files(
    FILES
    MoveitTarget.msg
+   MoveitPlan.msg
 )
 
 ## Generate services in the 'srv' folder
@@ -72,6 +74,7 @@ generate_messages(
   baxter_core_msgs
   std_msgs
   geometry_msgs
+  moveit_msgs
 )
 
 ################################################
