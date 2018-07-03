@@ -11,7 +11,9 @@ from sensor_msgs.msg import JointState
 import sys
 import copy
 from baxter_core_msgs.srv import SolvePositionIK, SolvePositionIKRequest
+# from baxter_core_msgs.msg import EndEffectorState
 import baxter_interface
+import math
 
 class PlanHandler(object):
   def __init__(self):
@@ -26,7 +28,7 @@ class PlanHandler(object):
     self.group = moveit_commander.MoveGroupCommander('right_arm')
     self.get_prev_id = {} # id to prev id in sequence
     self.get_next_id = {} # id to next id in sequence
-    self.get_angles = {} # id to pose of the arm in said state
+    # self.get_angles = {} # id to pose of the arm in said state
     self.get_pose = {} # id to end effector pose
 
     self.get_gripper_state = {} # id to 1/0 gripper open
@@ -36,14 +38,28 @@ class PlanHandler(object):
 
     self.ik_fail_pub = rospy.Publisher('ros_reality_ik_status', String, queue_size=0)
     self.gripper_pub = rospy.Publisher("/ein/right/forth_commands", String, queue_size = 0)
-    self.plan_pub = rospy.Publisher("ros_reality_motion_plan", MoveitPlan, queue_size = 0)
+    self.gripper_pub.publish('openGripper')
+    self.gripping = False
+    # self.plan_pub = rospy.Publisher("ros_reality_motion_plan", MoveitPlan, queue_size = 0)
+    self.generate_hardcode_locs()
+
+  def generate_hardcode_locs(self):
+    self.object_positions = []
+    seed = Point()
+    seed.x = 0.686
+    seed.y = -0.481
+    seed.z = -0.16
+    self.object_positions.append(seed)
 
   def send_plan_request(self, data):
+    print self.get_pose
     # print data
     msg = data.id.data
+    print msg
     if msg == "": # case where we are closing the client and need to erase the data associated w/ sesh
       print "RESET"
       self.initializer()
+      return
     limb_joints = self.ik_solve_right(data.right_arm)
     
     # check that the pose is allowable
@@ -63,6 +79,22 @@ class PlanHandler(object):
       self.get_gripper_state[data.id.data] = data.right_open.data
       self.get_pose[data.id.data] = data.right_arm
 
+    waypoints = [] # should use a global priority queue for this ideally...
+    #waypoints.append(self.group.get_current_pose().pose)
+    if self.first_movable_point_id == None:
+      return
+
+    # create the motion plan
+    curr_id = self.first_movable_point_id
+    
+    while curr_id != None:
+      waypoints.append(copy.deepcopy(self.get_pose[curr_id]))
+      curr_id = self.get_next_id[curr_id]
+    self.group = moveit_commander.MoveGroupCommander('right_arm')
+    self.group.set_planning_time(float(len(self.get_pose)))
+    (plan, fraction) = self.group.compute_cartesian_path(waypoints, 0.01, 0.0)
+
+    '''
     #planning part of the function
     if self.get_prev_id[data.id.data] == "START":
       self.group.set_start_state_to_current_state()
@@ -87,34 +119,62 @@ class PlanHandler(object):
       (plan, fraction) = self.group.compute_cartesian_path([self.get_pose[self.get_next_id[data.id.data]]], 0.01, 0.0)
       self.publish_plan(plan, data.id)
       self.get_plan[self.get_next_id[data.id.data]] = plan
+    '''
 
   def move_to_goal(self, data):
     print "hi!!"
     curr = self.first_movable_point_id
-
     while curr != None:
       self.group.set_start_state_to_current_state()
       self.group.set_planning_time(2.0)
-      (plan, fraction) = self.group.compute_cartesian_path([self.get_pose[curr]], 0.01, 0.0)
+
+      if self.get_gripper_state[curr] == "0" and not self.gripping: # case where we have to pick something up
+        print "In here"
+        self.gripping = True
+        (plan, fraction) = self.group.compute_cartesian_path(self.get_pick_points(self.get_pose[curr]), 0.01, 0.0)
+      else:
+        (plan, fraction) = self.group.compute_cartesian_path([self.get_pose[curr]], 0.01, 0.0)
+
       self.group.execute(plan)
       print self.get_gripper_state[curr]
-      rospy.sleep(0.8)
       if self.get_gripper_state[curr] == "1":
+        self.gripping = False
         self.gripper_pub.publish('openGripper')
       else:
         self.gripper_pub.publish('closeGripper')
+      rospy.sleep(0.8)
       curr = self.get_next_id[curr]
     
-  def set_start_pose(self, id_data):
-    joint_state = JointState()
-    joint_state.header = Header()
-    joint_state.header.stamp = rospy.Time.now()
-    assert len(self.names) != 0
-    joint_state.name = self.names
-    joint_state.position = self.get_angles[id_data]
-    moveit_robot_state = RobotState()
-    moveit_robot_state.joint_state = joint_state
-    self.group.set_start_state(moveit_robot_state)
+  def get_pick_points(self, raw_pose):
+    mini = float("inf")
+    loc = None
+    for pt in self.object_positions:
+      if self.get_dist(raw_pose.position, pt) < mini:
+        loc = pt
+    inter_pt = copy.copy(loc)
+    inter_pt.z += 0.1
+    inter_pose = Pose()
+    loc_pose = Pose()
+    inter_pose.position = inter_pt
+    loc_pose.position = loc
+    inter_pose.orientation = raw_pose.orientation
+    loc_pose.orientation = raw_pose.orientation
+    print [inter_pose, loc_pose]
+    return [inter_pose, loc_pose]
+
+  def get_dist(self, a, b):
+    return math.sqrt( math.pow(a.x-b.x, 2) + math.pow(a.y-b.y, 2) + math.pow(a.z-b.z, 2) )
+
+  # def set_start_pose(self, id_data):
+  #   joint_state = JointState()
+  #   joint_state.header = Header()
+  #   joint_state.header.stamp = rospy.Time.now()
+  #   assert len(self.names) != 0
+  #   joint_state.name = self.names
+  #   joint_state.position = self.get_angles[id_data]
+  #   moveit_robot_state = RobotState()
+  #   moveit_robot_state.joint_state = joint_state
+  #   self.group.set_start_state(moveit_robot_state)
 
   def network_point(self, data):
     self.get_gripper_state[data.id.data] = data.right_open.data
@@ -133,14 +193,14 @@ class PlanHandler(object):
     else:
       self.get_next_id[data.id.data] = None
 
-  def publish_plan(self, plan, end_id):
-    msg = MoveitPlan()
-    msg.id = end_id
-    msg.plan = plan
-    self.plan_pub.publish(msg)
+  # def publish_plan(self, plan, end_id):
+  #   msg = MoveitPlan()
+  #   msg.id = end_id
+  #   msg.plan = plan
+  #   self.plan_pub.publish(msg)
 
-  def print_data(self, data):
-    print data
+  # def print_data(self, data):
+  #   print data
 
   def ik_solve_right(self, p):
     ns = "ExternalTools/" + "right" + "/PositionKinematicsNode/IKService"
