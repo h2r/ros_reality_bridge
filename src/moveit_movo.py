@@ -17,8 +17,6 @@ class PlanHandler(object):
         self.robot = moveit_commander.RobotCommander()
         self.group_right = moveit_commander.MoveGroupCommander('right_arm')
         self.group_left = moveit_commander.MoveGroupCommander('left_arm')
-        self.group_right.set_pose_reference_frame('/base_link')
-        self.group_left.set_pose_reference_frame('/base_link')
         print 'pose reference frame before:', self.group_right.get_pose_reference_frame()
         self.group_right.set_pose_reference_frame('/base_link')
         self.group_left.set_pose_reference_frame('/base_link')
