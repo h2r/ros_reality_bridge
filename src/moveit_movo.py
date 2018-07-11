@@ -9,6 +9,7 @@ from ros_reality_bridge.msg import MoveitTarget
 from std_msgs.msg import String
 import time
 
+
 class PlanHandler(object):
     def __init__(self):
         moveit_commander.roscpp_initialize(sys.argv)
@@ -16,6 +17,8 @@ class PlanHandler(object):
         self.robot = moveit_commander.RobotCommander()
         self.group_right = moveit_commander.MoveGroupCommander('right_arm')
         self.group_left = moveit_commander.MoveGroupCommander('left_arm')
+        print 'planning frame:', self.group_right.get_planning_frame()
+        print 'planning frame:', self.group_left.get_planning_frame()
         self.group_right.set_pose_reference_frame('/base_link')
         self.group_left.set_pose_reference_frame('/base_link')
         self.print_initializer_msgs()
@@ -156,9 +159,11 @@ def generate_pose_target(pose):
     pose_target.orientation.z = pose[5]
     pose_target.orientation.w = pose[6]
     return pose_target
-    
+
+
 def identity_pose_request_callback(data):
     planHandler.generate_identity_plan(execute=True)
+
 
 if __name__ == '__main__':
     rospy.Subscriber('/holocontrol/identity_pose_request', String, identity_pose_request_callback)
