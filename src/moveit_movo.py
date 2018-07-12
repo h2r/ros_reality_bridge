@@ -21,7 +21,6 @@ class PlanHandler(object):
         self.group_right.set_pose_reference_frame('/base_link')
         self.group_left.set_pose_reference_frame('/base_link')
         print 'pose reference frame after:', self.group_right.get_pose_reference_frame()
-        print 'planning frame:', self.group_right.get_planning_frame()
         print 'planning frame:', self.group_left.get_planning_frame()
         self.print_initializer_msgs()
         self.left_arm_plan_publisher = rospy.Publisher('/movo_moveit/left_arm_plan', RobotTrajectory, queue_size=1)
@@ -102,13 +101,13 @@ class PlanHandler(object):
         Generate a plan to move to the current pose - used to force joint state updates in unity.
         :return: moveit_msgs.msg.RobotTrajectory (None if failed)
         """
-        pose = self.get_pose_left_arm()
+        pose = self.get_pose_right_arm()
         poselist = [pose.position.x, pose.position.y, pose.position.z, pose.orientation.x, pose.orientation.y,
                     pose.orientation.z, pose.orientation.w]
         print 'pose:', poselist
-        plan = self.generate_plan_left_arm(poselist)
+        plan = self.generate_plan_right_arm(poselist)
         if execute:
-            self.execute_plan_left_arm(plan)
+            self.execute_plan_right_arm(plan)
         return plan
 
 
@@ -170,7 +169,7 @@ def identity_pose_request_callback(data):
 if __name__ == '__main__':
     rospy.Subscriber('/holocontrol/identity_pose_request', String, identity_pose_request_callback)
     planHandler = PlanHandler()
-    plan = planHandler.generate_identity_plan()
+    plan = planHandler.generate_identity_plan(execute=True)
     while plan is None:
         plan = planHandler.generate_identity_plan()
     rospy.spin()
