@@ -20,17 +20,18 @@ class PlanHandler(object):
         self.group_right.set_pose_reference_frame('/base_link')
         self.group_left.set_pose_reference_frame('/base_link')
         print 'pose reference frame after:', self.group_right.get_pose_reference_frame()
-        print 'planning frame:', self.group_right.get_planning_frame()
         print 'planning frame:', self.group_left.get_planning_frame()
         self.print_initializer_msgs()
         self.left_arm_plan_publisher = rospy.Publisher('/movo_moveit/left_arm_plan', RobotTrajectory, queue_size=1)
         self.right_arm_plan_publisher = rospy.Publisher('/movo_moveit/right_arm_plan', RobotTrajectory, queue_size=1)
-        rospy.Subscriber('/movocontrol/goal_pose_left', MoveitTarget, self.left_arm_pose_callback)
-        rospy.Subscriber('/movocontrol/goal_pose_right', MoveitTarget, self.right_arm_pose_callback)
-        self.t = tf.Transformer(True, rospy.Duration(10.0))
-        offset_p, offset_q = self.t.lookupTransform('/base_link', '/odom')
-        print 'offset_p:', offset_p
-        print 'offset_q:', offset_q
+        #rospy.Subscriber('/movocontrol/goal_pose_left', MoveitTarget, self.left_arm_pose_callback)
+        #rospy.Subscriber('/movocontrol/goal_pose_right', MoveitTarget, self.right_arm_pose_callback)
+        rospy.Subscriber('/ros_reality/goal_pose', MoveitTarget, self.goal_pose_callback, queue_size=1)
+        #self.listener = tf.TransformListener(True, rospy.Duration(10.0))
+        #self.listener.waitForTransform('/base_link', '/odom', rospy.Time(), rospy.Duration(5.0))
+        # self.offset_p, self.offset_q = self.listener.lookupTransform('/base_link', '/odom', rospy.Time(0))
+        # print 'offset_p:', self.offset_p
+        # print 'offset_q:', self.offset_q
 
     def print_initializer_msgs(self):
         print "================ Robot Groups ==============="
@@ -39,30 +40,37 @@ class PlanHandler(object):
         print self.robot.get_current_state()
         print "============================================="
 
-    def left_arm_pose_callback(self, data):
-        pass
+    def goal_pose_callback(self, data):
+        moveit_target = data
+        arm_to_move = moveit_target.arm_to_move.data
+        assert (arm_to_move in ['right', 'left'])
+        return
+        if arm_to_move == 'right':
+            goal_pose = moveit_target.right_arm
+            assert isinstance(goal_pose, geometry_msgs.msg.PoseStamped)
+            #print 'right arm goal:', goal_pose
+            plan = self.generate_plan_right_arm(goal_pose)
+            print 'plan:', plan
 
-    def right_arm_pose_callback(self, data):
-        pass
 
     def get_pose_right_arm(self):
         """
         Get the pose of the right end-effector.
         :return: geometry_msgs.msg.Pose
         """
-        return self.group_right.get_current_pose().pose
-        
+        return self.group_right.get_current_pose()
+
     def get_pose_left_arm(self):
         """
         Get the pose of the left end-effector.
         :return: geometry_msgs.msg.Pose
         """
-        return self.group_left.get_current_pose().pose
-    
+        return self.group_left.get_current_pose()
+
     def generate_plan_right_arm(self, goal_pose):
         """
         Moves the left end effector to the specified pose.
-        :param goal_pose: A list of 7 floats: (x,y,z,qx,qy,qz,qw)
+        :param goal_pose: geometry_msgs.msg.PoseStamped
         :return: RobotTrajectory (None if failed)
         """
         plan = generate_plan(self.group_right, goal_pose)
@@ -75,7 +83,7 @@ class PlanHandler(object):
     def generate_plan_left_arm(self, goal_pose):
         """
         Moves the left end effector to the specified pose.
-        :param goal_pose: A list of 7 floats: (x,y,z,qx,qy,qz,qw)
+        :type goal_pose: geometry_msgs.msg.PoseStamped
         :return: RobotTrajectory (None if failed)
         """
         plan = generate_plan(self.group_left, goal_pose)
@@ -99,32 +107,49 @@ class PlanHandler(object):
         :return: Boolean indicating success.
         """
         return execute_plan(self.group_left, plan)
-        
+
     def generate_identity_plan(self, execute=False):
         """
         Generate a plan to move to the current pose - used to force joint state updates in unity.
         :return: moveit_msgs.msg.RobotTrajectory (None if failed)
         """
-        pose = self.get_pose_left_arm()
-        poselist = [pose.position.x, pose.position.y, pose.position.z, pose.orientation.x, pose.orientation.y,
-                    pose.orientation.z, pose.orientation.w]
-        print 'pose:', poselist
-        plan = self.generate_plan_left_arm(poselist)
+        pose = self.get_pose_right_arm()
+        print 'target pose:', pose
+        plan = self.generate_plan_right_arm(pose)
         if execute:
-            self.execute_plan_left_arm(plan)
+            print 'execute status:', self.execute_plan_right_arm(plan)
         return plan
+
+
+def generate_pose_target(pose):
+    """
+    Takes in a pose and converts it to geometry_msgs.msg.PoseStamped
+    :param pose: A list of 7 floats: (x,y,z,qx,qy,qz,qw)
+    """
+    assert len(pose) == 7  # assert 3 positions and 4 quaternions
+    assert all(isinstance(c, float) for c in pose)  # assert pose contains only floats
+    pose_target = geometry_msgs.msg.PoseStamped()
+    pose_target.header.frame_id = '/base_link'
+    pose_target.pose.position.x = pose[0]
+    pose_target.pose.position.y = pose[1]
+    pose_target.pose.position.z = pose[2]
+    pose_target.pose.orientation.x = pose[3]
+    pose_target.pose.orientation.y = pose[4]
+    pose_target.pose.orientation.z = pose[5]
+    pose_target.pose.orientation.w = pose[6]
+    return pose_target
 
 
 def generate_plan(group, goal_pose):
     """
     Moves the group ('left_arm' or 'right_arm') to goal_pose
-    :param goal_pose: A list of 7 floats: (x,y,z,qx,qy,qz,qw)
     :return: RobotTrajectory (None if failed)
     :type group: moveit_commander.move_group.MoveGroupCommander
+    :type goal_pose: geometry_msgs.msg.PoseStamped
     """
     assert isinstance(group, moveit_commander.move_group.MoveGroupCommander)
-    pose_target = generate_pose_target(goal_pose)
-    group.set_pose_target(pose_target)
+    assert isinstance(goal_pose, geometry_msgs.msg.PoseStamped)
+    group.set_pose_target(goal_pose)
     plan = group.plan()
     if not plan.joint_trajectory.joint_names:  # empty list means failed plan
         print 'Plan failed! :('
@@ -148,32 +173,18 @@ def execute_plan(group, plan):
     return group.execute(plan)
 
 
-def generate_pose_target(pose):
-    """
-    Takes in a pose and converts it to geometry_msgs.msg.Pose
-    :param pose: A list of 7 floats: (x,y,z,qx,qy,qz,qw)
-    """
-    assert len(pose) == 7  # assert 3 positions and 4 quaternions
-    assert all(isinstance(c, float) for c in pose)  # assert pose contains only floats
-    pose_target = geometry_msgs.msg.Pose()
-    pose_target.position.x = pose[0]
-    pose_target.position.y = pose[1]
-    pose_target.position.z = pose[2]
-    pose_target.orientation.x = pose[3]
-    pose_target.orientation.y = pose[4]
-    pose_target.orientation.z = pose[5]
-    pose_target.orientation.w = pose[6]
-    return pose_target
-
-
 def identity_pose_request_callback(data):
     planHandler.generate_identity_plan(execute=True)
+
+
+def sum_lists(lst1, lst2):
+    return [x + y for x, y in zip(lst1, lst2)]
 
 
 if __name__ == '__main__':
     rospy.Subscriber('/holocontrol/identity_pose_request', String, identity_pose_request_callback)
     planHandler = PlanHandler()
-    plan = planHandler.generate_identity_plan()
-    while plan is None:
-        plan = planHandler.generate_identity_plan()
+    p = planHandler.generate_identity_plan(execute=True)
+    while p is None:
+        p = planHandler.generate_identity_plan()
     rospy.spin()
