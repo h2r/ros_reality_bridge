@@ -1,13 +1,12 @@
 #!/usr/bin/env python
 import sys
-import copy
 import rospy
 import moveit_commander
 import geometry_msgs.msg
 from moveit_msgs.msg import RobotTrajectory
 from ros_reality_bridge.msg import MoveitTarget
 from std_msgs.msg import String
-import time
+import tf
 
 
 class PlanHandler(object):
@@ -27,6 +26,10 @@ class PlanHandler(object):
         self.right_arm_plan_publisher = rospy.Publisher('/movo_moveit/right_arm_plan', RobotTrajectory, queue_size=1)
         rospy.Subscriber('/movocontrol/goal_pose_left', MoveitTarget, self.left_arm_pose_callback)
         rospy.Subscriber('/movocontrol/goal_pose_right', MoveitTarget, self.right_arm_pose_callback)
+        self.t = tf.Transformer(True, rospy.Duration(10.0))
+        offset_p, offset_q = self.t.lookupTransform('/base_link', '/odom')
+        print 'offset_p:', offset_p
+        print 'offset_q:', offset_q
 
     def print_initializer_msgs(self):
         print "================ Robot Groups ==============="
