@@ -114,19 +114,10 @@ class PlanHandler(object):
         :return: moveit_msgs.msg.RobotTrajectory (None if failed)
         """
         pose = self.get_pose_right_arm()
-<<<<<<< HEAD
         print 'target pose:', pose
         plan = self.generate_plan_right_arm(pose)
         if execute:
             print 'execute status:', self.execute_plan_right_arm(plan)
-=======
-        poselist = [pose.position.x, pose.position.y, pose.position.z, pose.orientation.x, pose.orientation.y,
-                    pose.orientation.z, pose.orientation.w]
-        print 'pose:', poselist
-        plan = self.generate_plan_right_arm(poselist)
-        if execute:
-            self.execute_plan_right_arm(plan)
->>>>>>> 0dd5fd0039214a2c8ee1fac8bef195b4cf3bf89b
         return plan
 
 
