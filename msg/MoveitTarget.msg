@@ -1,9 +1,5 @@
-geometry_msgs/Pose left_arm
-geometry_msgs/Pose right_arm
+geometry_msgs/PoseStamped left_arm
+geometry_msgs/PoseStamped right_arm
 std_msgs/String left_open
 std_msgs/String right_open
-std_msgs/String sid
-std_msgs/String gid
-std_msgs/String prev_id
-std_msgs/String next_id
-std_msgs/String visualize
+std_msgs/String arm_to_move
