@@ -1,0 +1,10 @@
+<launch>
+<include file="$(find rosbridge_server)/launch/rosbridge_websocket.launch" />
+<include file="$(find movo_demos)/launch/nav/map_nav.launch">
+	<arg name="map_file" value="cit219renovated" />
+</include>
+<include file="$(find movo_viz)/launch/view_robot.launch">
+	<arg name="function" value="map_nav" />
+</include>
+<node name="ros_reality_node" pkg="ros_reality_bridge" type="movocontrol_nav.py" output="screen"/>
+</launch>
