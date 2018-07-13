@@ -12,7 +12,7 @@ import tf
 class PlanHandler(object):
     def __init__(self):
         moveit_commander.roscpp_initialize(sys.argv)
-        rospy.init_node('move_group_python_interface', anonymous=True)
+        rospy.init_node('movo_moveit_node', anonymous=True)
         self.robot = moveit_commander.RobotCommander()
         self.group_right = moveit_commander.MoveGroupCommander('right_arm')
         self.group_left = moveit_commander.MoveGroupCommander('left_arm')
@@ -34,8 +34,8 @@ class PlanHandler(object):
     def print_initializer_msgs(self):
         print "================ Robot Groups ==============="
         print self.robot.get_group_names()
-        # print "================ Robot State ================"
-        # print self.robot.get_current_state()
+        print "================ End Effectors =============="
+        print [self.group_left.get_end_effector_link(), self.group_right.get_end_effector_link()]
         print "============================================="
 
     def goal_pose_callback(self, data):
@@ -132,13 +132,13 @@ class PlanHandler(object):
         Generate a plan to move to the current pose - used to force joint state updates in unity.
         :return: moveit_msgs.msg.RobotTrajectory (None if failed)
         """
-        print 'generating identity plan...'
+        #print 'generating identity plan...'
         pose = self.get_pose_right_arm()
         # print 'target pose:', pose
         plan = self.generate_plan_right_arm(pose)
         if execute:
             print 'execute status:', self.execute_plan_right_arm(plan)
-        print 'done!'
+        #print 'done!'
         return plan
 
     def execute_plan(self, group, plan):
