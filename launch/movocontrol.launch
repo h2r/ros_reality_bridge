@@ -6,5 +6,5 @@
 <include file="$(find movo_viz)/launch/view_robot.launch">
 	<arg name="function" value="map_nav" />
 </include>
-<node name="ros_reality_node" pkg="ros_reality_bridge" type="movocontrol_nav.py" output="screen"/>
+<node name="movo_controller" pkg="ros_reality_bridge" type="movocontrol_nav.py" output="screen"/>
 </launch>
