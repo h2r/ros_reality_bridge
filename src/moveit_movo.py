@@ -19,8 +19,6 @@ class PlanHandler(object):
         self.group_arms.set_pose_reference_frame('/base_link')
         print 'planning frame:', self.group_arms.get_planning_frame()
         self.print_initializer_msgs()
-        # self.left_arm_plan_publisher = rospy.Publisher('/movo_moveit/left_arm_plan', RobotTrajectory, queue_size=1)
-        # self.right_arm_plan_publisher = rospy.Publisher('/movo_moveit/right_arm_plan', RobotTrajectory, queue_size=1)
         self.plan_publisher = rospy.Publisher('/movo_moveit/motion_plan', RobotTrajectory, queue_size=1)
         rospy.Subscriber('/ros_reality/goal_pose', MoveitTarget, self.goal_pose_callback, queue_size=1)
         rospy.Subscriber('/ros_reality/move_to_goal', String, self.execute_goal_callback, queue_size=1)
