@@ -2,4 +2,3 @@ geometry_msgs/PoseStamped left_arm
 geometry_msgs/PoseStamped right_arm
 std_msgs/String left_open
 std_msgs/String right_open
-std_msgs/String arm_to_move
