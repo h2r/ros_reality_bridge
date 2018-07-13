@@ -24,14 +24,16 @@ class PlanHandler(object):
         self.print_initializer_msgs()
         self.left_arm_plan_publisher = rospy.Publisher('/movo_moveit/left_arm_plan', RobotTrajectory, queue_size=1)
         self.right_arm_plan_publisher = rospy.Publisher('/movo_moveit/right_arm_plan', RobotTrajectory, queue_size=1)
-        #rospy.Subscriber('/movocontrol/goal_pose_left', MoveitTarget, self.left_arm_pose_callback)
-        #rospy.Subscriber('/movocontrol/goal_pose_right', MoveitTarget, self.right_arm_pose_callback)
         rospy.Subscriber('/ros_reality/goal_pose', MoveitTarget, self.goal_pose_callback, queue_size=1)
-        #self.listener = tf.TransformListener(True, rospy.Duration(10.0))
-        #self.listener.waitForTransform('/base_link', '/odom', rospy.Time(), rospy.Duration(5.0))
+        rospy.Subscriber('/ros_reality/move_to_goal', String, self.execute_goal_callback, queue_size=1)
+        # self.listener = tf.TransformListener(True, rospy.Duration(10.0))
+        # self.listener.waitForTransform('/base_link', '/odom', rospy.Time(), rospy.Duration(5.0))
         # self.offset_p, self.offset_q = self.listener.lookupTransform('/base_link', '/odom', rospy.Time(0))
         # print 'offset_p:', self.offset_p
         # print 'offset_q:', self.offset_q
+        self.plan_to_execute = None
+        self.planning = False
+        self.arm_to_move = None
 
     def print_initializer_msgs(self):
         print "================ Robot Groups ==============="
@@ -41,17 +43,41 @@ class PlanHandler(object):
         print "============================================="
 
     def goal_pose_callback(self, data):
+        self.planning = True
         moveit_target = data
-        arm_to_move = moveit_target.arm_to_move.data
-        assert (arm_to_move in ['right', 'left'])
-        return
-        if arm_to_move == 'right':
+        self.arm_to_move = moveit_target.arm_to_move.data
+        print 'arm_to_move:', self.arm_to_move
+        if self.arm_to_move is None:
+            return
+        print 'planning!'
+        if self.arm_to_move == 'right':
             goal_pose = moveit_target.right_arm
             assert isinstance(goal_pose, geometry_msgs.msg.PoseStamped)
-            #print 'right arm goal:', goal_pose
+            # print 'right arm goal:', goal_pose
             plan = self.generate_plan_right_arm(goal_pose)
-            print 'plan:', plan
+            # print 'right arm plan:', plan
+            self.plan_to_execute = plan
+        elif self.arm_to_move == 'left':
+            goal_pose = moveit_target.left_arm
+            assert isinstance(goal_pose, geometry_msgs.msg.PoseStamped)
+            plan = self.generate_plan_left_arm(goal_pose)
+            # print 'left arm plan:', plan
+            self.plan_to_execute = plan
+        self.planning = False
+        print 'done planning!'
 
+    def execute_goal_callback(self, data):
+        while self.planning:  # is this necessary?
+            continue
+        if self.arm_to_move is None:
+            return
+        if self.plan_to_execute is None:
+            print 'execute_goal_callback: no plan to execute!'
+            return
+        if self.arm_to_move == 'right':
+            self.execute_plan_right_arm(self.plan_to_execute)
+        else:
+            self.execute_plan_left_arm(self.plan_to_execute)
 
     def get_pose_right_arm(self):
         """
