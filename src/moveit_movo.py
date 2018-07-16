@@ -6,54 +6,46 @@ import geometry_msgs.msg
 from moveit_msgs.msg import RobotTrajectory
 from ros_reality_bridge.msg import MoveitTarget
 from std_msgs.msg import String
-# import actionlib
-#
-# from control_msgs.msg import GripperCommandAction, GripperCommandGoal
+import actionlib
+
+from control_msgs.msg import GripperCommandAction, GripperCommandGoal
 
 
-# class GripperActionPlanner(object):
-#     def __init__(self, prefix="right"):
-#         self._prefix = prefix
-#         self._client = actionlib.SimpleActionClient(
-#             '/movo/%s_gripper_controller/gripper_cmd' % self._prefix,
-#             GripperCommandAction,
-#         )
-#         self._goal = GripperCommandGoal()
-#         server_up = self._client.wait_for_server(timeout=rospy.Duration(10))
-#         if not server_up:
-#             rospy.logerr("Timed out waiting for Gripper Command"
-#                          " Action Server to connect. Start the action server"
-#                          " before running example.")
-#             rospy.signal_shutdown("Timed out waiting for Action Server")
-#             sys.exit(1)
-#         self.clear()
-#
-#     def command(self, position, block=False, timeout=15):
-#         self._goal.command.position = position
-#         self._goal.command.max_effort = -1.0
-#         self._client.send_goal(self._goal)
-#         if block:
-#             self._client.wait_for_result(timeout=rospy.Duration(timeout))
-#
-#     def stop(self):
-#         self._client.cancel_goal()
-#
-#     def wait(self, timeout=15):
-#         self._client.wait_for_result(timeout=rospy.Duration(timeout))
-#
-#     def result(self):
-#         return self._client.get_result()
-# lass GripperActionPlanner(object):
-#     def __init__(self, prefix="right"):
-#         self._prefix = prefix
-#         self._client = actionlib.SimpleActionClient(
-#             '/movo/%s_gripper_controller/gripper_cmd' % self._prefix,
-#             GripperCommandAction,
-#         )
-#         self._goal = GripperCommandGoal()
-#         server_up = self._client.
-#     def clear(self):
-#         self._goal = GripperCommandGoal()
+class GripperActionPlanner(object):
+    def __init__(self, prefix="right"):
+        self._prefix = prefix
+        self._client = actionlib.SimpleActionClient(
+            '/movo/%s_gripper_controller/gripper_cmd' % self._prefix,
+            GripperCommandAction,
+        )
+        self._goal = GripperCommandGoal()
+        server_up = self._client.wait_for_server(timeout=rospy.Duration(10))
+        if not server_up:
+            rospy.logerr("Timed out waiting for Gripper Command"
+                         " Action Server to connect. Start the action server"
+                         " before running example.")
+            rospy.signal_shutdown("Timed out waiting for Action Server")
+            sys.exit(1)
+        self.clear()
+
+    def command(self, position, block=False, timeout=15):
+        self._goal.command.position = position
+        self._goal.command.max_effort = -1.0
+        self._client.send_goal(self._goal)
+        if block:
+            self._client.wait_for_result(timeout=rospy.Duration(timeout))
+
+    def stop(self):
+        self._client.cancel_goal()
+
+    def wait(self, timeout=15):
+        self._client.wait_for_result(timeout=rospy.Duration(timeout))
+
+    def result(self):
+        return self._client.get_result()
+
+    def clear(self):
+        self._goal = GripperCommandGoal()
 
 
 class ArmPlanner(object):
@@ -169,31 +161,31 @@ def identity_pose_request_callback(data):
     armPlanner.generate_identity_plan(execute=False)
 
 
-# def right_gripper_callback(data):
-#     assert data.data in ['open', 'close']
-#     position = 0.165
-#     if data.data == 'close':
-#         position = 0.0
-#     rightGripper.command(position)
-#     rightGripper.wait()
-#     print 'Gripper command result:', rightGripper.result()
-#
-#
-# def left_gripper_callback(data):
-#     assert data.data in ['open', 'close']
-#     position = 0.165
-#     if data.data == 'close':
-#         position = 0.0
-#     leftGripper.command(position)
-#     leftGripper.wait()
-#     print 'Gripper command result:', leftGripper.result()
+def right_gripper_callback(data):
+    assert data.data in ['open', 'close']
+    position = 0.165
+    if data.data == 'close':
+        position = 0.0
+    rightGripper.command(position)
+    rightGripper.wait()
+    print 'Gripper command result:', rightGripper.result()
+
+
+def left_gripper_callback(data):
+    assert data.data in ['open', 'close']
+    position = 0.165
+    if data.data == 'close':
+        position = 0.0
+    leftGripper.command(position)
+    leftGripper.wait()
+    print 'Gripper command result:', leftGripper.result()
 
 
 if __name__ == '__main__':
     rospy.Subscriber('/holocontrol/identity_pose_request', String, identity_pose_request_callback)
-    # rospy.Subscriber('/holocontrol/right_gripper_command', String, right_gripper_callback)
-    # rospy.Subscriber('/holocontrol/left_gripper_command', String, left_gripper_callback)
+    rospy.Subscriber('/holocontrol/right_gripper_command', String, right_gripper_callback)
+    rospy.Subscriber('/holocontrol/left_gripper_command', String, left_gripper_callback)
     armPlanner = ArmPlanner()
-    # rightGripper = GripperActionPlanner("right")
-    # leftGripper = GripperActionPlanner("left")
+    rightGripper = GripperActionPlanner("right")
+    leftGripper = GripperActionPlanner("left")
     rospy.spin()
