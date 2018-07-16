@@ -191,8 +191,8 @@ def identity_pose_request_callback(data):
 
 if __name__ == '__main__':
     rospy.Subscriber('/holocontrol/identity_pose_request', String, identity_pose_request_callback)
-    rospy.Subscriber('/holocontrol/right_gripper_command', String, right_gripper_callback)
-    rospy.Subscriber('/holocontrol/left_gripper_command', String, left_gripper_callback)
+    # rospy.Subscriber('/holocontrol/right_gripper_command', String, right_gripper_callback)
+    # rospy.Subscriber('/holocontrol/left_gripper_command', String, left_gripper_callback)
     armPlanner = ArmPlanner()
     # rightGripper = GripperActionPlanner("right")
     # leftGripper = GripperActionPlanner("left")
