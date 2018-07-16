@@ -121,6 +121,7 @@ class ArmPlanner(object):
             self.group_arms.set_pose_target(goal_pose_left, self.left_ee_link)
         if goal_pose_right is not None:
             self.group_arms.set_pose_target(goal_pose_right, self.right_ee_link)
+        print 'planning...'
         plan = self.group_arms.plan()
         if not plan.joint_trajectory.joint_names:  # empty list means failed plan
             print 'Plan failed! :('
