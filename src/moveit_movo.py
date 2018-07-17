@@ -125,6 +125,7 @@ class ArmPlanner(object):
         plan = self.group_arms.plan()
         if not plan.joint_trajectory.joint_names:  # empty list means failed plan
             print 'Plan failed! :('
+            self.generate_identity_plan(execute=False)
             return
         self.plan_publisher.publish(plan)
         return plan
