@@ -3,9 +3,10 @@ import numpy as np
 import actionlib
 import rospy
 import tf
-from geometry_msgs.msg import Twist
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 from std_msgs.msg import String
+import nav_msgs.srv
+from nav_msgs.msg import Path
 
 
 class Pose:
@@ -110,18 +111,33 @@ def initialize_request_callback(data):
     movo.ready_to_go = False
 
 
+def generate_navigation_plan(start, goal, tolerance):
+    """
+    :type start: geometry_msgs.msg.PoseStamped
+    :type goal: geometry_msgs.msg.PoseStamped
+    :type tolerance: float
+    :return: nav_msgs.msg.Path
+    """
+    try:
+        return get_plan(start, goal, tolerance)
+    except rospy.ServiceException as exc:
+        print 'Service did not process request: ' + str(exc)
+
+
 if __name__ == '__main__':
     try:
         listener = tf.TransformListener()
         rospy.init_node('movo_controller', anonymous=True)
         movo = MovoTeleop()
-        velocity_publisher = rospy.Publisher('/movo/cmd_vel', Twist, queue_size=10)
         movo_state_publisher = rospy.Publisher('holocontrol/ros_movo_state_pub', String, queue_size=0)
         movo_pose_publisher = rospy.Publisher('holocontrol/ros_movo_pose_pub', String, queue_size=0)
+        movo_plan_publisher = rospy.Publisher('move_base/GlobalPlanner/plan', Path, queue_size=0)
         rospy.Subscriber('holocontrol/movo_state_request', String, state_request_callback)
         rospy.Subscriber('holocontrol/movo_pose_request', String, poserequest_callback)
         rospy.Subscriber('holocontrol/unity_waypoint_pub', String, waypoint_callback)
         rospy.Subscriber('holocontrol/init_movocontrol_request', String, initialize_request_callback)
+        path_planning_service = '/move_base/GlobalPlanner/make_plan'
+        get_plan = rospy.ServiceProxy(path_planning_service, nav_msgs.srv.GetPlan)
     except (rospy.ROSInterruptException, KeyboardInterrupt):
         print 'ROS exception :('
     rospy.spin()
