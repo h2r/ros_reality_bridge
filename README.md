@@ -24,6 +24,6 @@ Finally, you will need to install rosbridge. You can install it via apt-get ```s
 
 To start ROS Reality, simply run the following command on your Baxter workstation:
 
-``roslaunch ros_reality ros_reality.launch``
+``roslaunch ros_reality_bridge ros_reality_bridge.launch``
 
 Great, now this computer is sending information about the ROS network. Go to your Unity computer and follow the intstructions here: https://github.com/h2r/ROS_Unity
