@@ -7,6 +7,7 @@ from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 from std_msgs.msg import String
 import nav_msgs.srv
 from nav_msgs.msg import Path
+from geometry_msgs.msg import PoseStamped
 
 
 class Pose:
@@ -23,6 +24,7 @@ class MovoTeleop:
         self.curr_state = 'standby'
         self.listener = tf.TransformListener()
         self.ready_to_go = False
+        self.pose_stamped = None
 
     def update_pose(self):
         while not rospy.is_shutdown():
@@ -31,6 +33,16 @@ class MovoTeleop:
                 z_rot = tf.transformations.euler_from_quaternion(rot)[2]
                 self.pose.x, self.pose.y = round(trans[0], 4), round(trans[1], 4)
                 self.pose.theta = np.rad2deg(z_rot)
+                self.pose_stamped = PoseStamped()
+                self.pose_stamped.header.stamp = rospy.Time.now()
+                self.pose_stamped.header.frame_id = 'map'
+                self.pose_stamped.pose.position.x = trans[0]
+                self.pose_stamped.pose.position.y = trans[1]
+                self.pose_stamped.pose.position.z = trans[2]
+                self.pose_stamped.pose.orientation.x = rot[0]
+                self.pose_stamped.pose.orientation.y = rot[1]
+                self.pose_stamped.pose.orientation.z = rot[2]
+                self.pose_stamped.pose.orientation.w = rot[3]
                 self.rate.sleep()
                 return
             except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
@@ -54,7 +66,7 @@ def movebase_client(goal_x, goal_y, goal_theta):
     goal = MoveBaseGoal()
     goal.target_pose.header.frame_id = "map"
     goal.target_pose.header.stamp = rospy.Time.now()
-    goal.target_pose.pose.position.x = goal_x
+    goal.target_pose.pose.positioheadern.x = goal_x
     goal.target_pose.pose.position.y = goal_y
 
     print 'GOAL:', goal_theta
@@ -111,6 +123,14 @@ def initialize_request_callback(data):
     movo.ready_to_go = False
 
 
+def waypoint_pose_stamp_callback(data):
+    print 'waypoint pose stamp callback'
+    assert isinstance(data.data, PoseStamped)
+    path = generate_navigation_plan(movo.pose_stamped, data.data)
+    print 'PATH:', path
+    movo_plan_publisher.publish(path)
+
+
 def generate_navigation_plan(start, goal, tolerance):
     """
     :type start: geometry_msgs.msg.PoseStamped
@@ -136,6 +156,7 @@ if __name__ == '__main__':
         rospy.Subscriber('holocontrol/movo_pose_request', String, poserequest_callback)
         rospy.Subscriber('holocontrol/unity_waypoint_pub', String, waypoint_callback)
         rospy.Subscriber('holocontrol/init_movocontrol_request', String, initialize_request_callback)
+        rospy.Subscriber('holocontrol/waypoint_pose_stamped', PoseStamped, waypoint_pose_stamp_callback)
         path_planning_service = '/move_base/GlobalPlanner/make_plan'
         get_plan = rospy.ServiceProxy(path_planning_service, nav_msgs.srv.GetPlan)
     except (rospy.ROSInterruptException, KeyboardInterrupt):
