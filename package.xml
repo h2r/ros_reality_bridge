@@ -40,15 +40,35 @@
   <!-- Use test_depend for packages you need only for testing: -->
   <!--   <test_depend>gtest</test_depend> -->
   <buildtool_depend>catkin</buildtool_depend>
+  <build_depend>roscpp</build_depend>
   <build_depend>rospy</build_depend>
   <build_depend>std_msgs</build_depend>
   <build_depend>geometry_msgs</build_depend>
   <build_depend>message_generation</build_depend>
+  <build_depend>base_local_planner</build_depend>
+  <build_depend>costmap_2d</build_depend>
+  <build_depend>dynamic_reconfigure</build_depend>
+  <build_depend>nav_core</build_depend>
+  <build_depend>nav_msgs</build_depend>
+  <build_depend>pcl_conversions</build_depend>
+  <build_depend>pluginlib</build_depend>
+  <build_depend>tf</build_depend>
+  <build_depend>dwa_local_planner</build_depend>
+  <run_depend>roscpp</run_depend>
   <run_depend>rospy</run_depend>
   <run_depend>std_msgs</run_depend>
   <run_depend>geometry_msgs</run_depend>
   <run_depend>rosbridge_server</run_depend>
   <run_depend>message_runtime</run_depend>
+  <run_depend>base_local_planner</run_depend>
+  <run_depend>costmap_2d</run_depend>
+  <run_depend>dynamic_reconfigure</run_depend>
+  <run_depend>nav_core</run_depend>
+  <run_depend>nav_msgs</run_depend>
+  <run_depend>pcl_conversions</run_depend>
+  <run_depend>pluginlib</run_depend>
+  <run_depend>tf</run_depend>
+  <run_depend>dwa_local_planner</run_depend>
 
   <!-- The export tag contains other, unspecified, tags -->
   <export>

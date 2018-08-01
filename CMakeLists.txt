@@ -5,12 +5,22 @@ project(ros_reality_bridge)
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
+  roscpp
   rospy
   std_msgs
   sensor_msgs
   geometry_msgs
   message_generation
   moveit_msgs
+  base_local_planner
+  costmap_2d
+  dynamic_reconfigure
+  nav_core
+  nav_msgs
+  pcl_conversions
+  pluginlib
+  tf
+  dwa_local_planner
 )
 
 ## System dependencies are found with CMake's conventions
@@ -144,6 +154,17 @@ include_directories(
 # target_link_libraries(rosUnity_node
 #   ${catkin_LIBRARIES}
 # )
+add_executable(talker src/talker.cpp)
+target_link_libraries(talker ${catkin_LIBRARIES})
+add_dependencies(talker ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+
+add_executable(listener src/listener.cpp)
+target_link_libraries(listener ${catkin_LIBRARIES})
+add_dependencies(listener ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+
+add_executable(local_planner src/local_planner.cpp)
+target_link_libraries(local_planner ${catkin_LIBRARIES})
+add_dependencies(local_planner ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 #############
 ## Install ##
