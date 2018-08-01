@@ -1,0 +1,7 @@
+<launch>
+<include file="$(find rosbridge_server)/launch/rosbridge_websocket.launch" />
+<include file="$(find movo_viz)/launch/view_robot.launch">
+	<arg name="function" value="map_nav" />
+</include>
+<node name="movo_controller" pkg="ros_reality_bridge" type="movocontrol_nav.py" output="screen"/>
+</launch>
