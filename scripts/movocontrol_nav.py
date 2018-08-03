@@ -108,29 +108,22 @@ def generate_navigation_plan(start, goal, tolerance=0.3):
 
 if __name__ == '__main__':
     try:
-        # path_planning_service = '/move_base/GlobalPlanner/make_plan'
         listener = tf.TransformListener()
         rospy.init_node('movo_controller', anonymous=True)
         movo = MovoTeleop()
         move_base_client = actionlib.SimpleActionClient('movo_move_base', MoveBaseAction)
-        # movo_state_publisher = rospy.Publisher('holocontrol/ros_movo_state_pub', String, queue_size=1)
         movo_pose_publisher = rospy.Publisher('holocontrol/ros_movo_pose_pub', String, queue_size=0)
-        # movo_pose_publisher = rospy.Publisher('holocontrol/ros_movo_pose_pub', PoseStamped, queue_size=0)
         movo_plan_publisher = rospy.Publisher('holocontrol/simulated_nav_path', Path, queue_size=1)
-        # rospy.Subscriber('holocontrol/movo_state_request', String, state_request_callback)
-        # rospy.Subscriber('holocontrol/movo_pose_request', String, poserequest_callback)
         movo_nav_finished_publisher = rospy.Publisher('holocontrol/nav_finished', String, queue_size=1)
-        # rospy.Subscriber('holocontrol/unity_waypoint_pub', String, waypoint_callback)
         rospy.Subscriber('holocontrol/unity_waypoint_pub', Path, waypoint_callback)
-        # rospy.Subscriber('holocontrol/init_movocontrol_request', String, initialize_request_callback)
-        # rospy.Subscriber('holocontrol/waypoint_pose_stamped', PoseStamped, waypoint_pose_stamp_callback)
         path_planning_service = '/move_base/MovoGlobalPlanner/make_plan'
+        rospy.loginfo('Waiting for GetPlan service...')
+        rospy.wait_for_service(path_planning_service)
+        rospy.loginfo('Got GetPlan service!')
         get_plan = rospy.ServiceProxy(path_planning_service, nav_msgs.srv.GetPlan)
         while not rospy.is_shutdown():
             movo.update_pose()
-            # movo_pose_publisher.publish(movo.pose_stamped)
             movo_pose_publisher.publish('{},{},{}'.format(movo.pose.x, movo.pose.y, movo.pose.theta))
-            # movo_state_publisher.publish(movo.curr_state)
             movo.rate.sleep()
     except (rospy.ROSInterruptException, KeyboardInterrupt):
         print 'ROS exception :('
