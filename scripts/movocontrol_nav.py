@@ -124,8 +124,7 @@ if __name__ == '__main__':
         rospy.Subscriber('holocontrol/unity_waypoint_pub', Path, waypoint_callback)
         # rospy.Subscriber('holocontrol/init_movocontrol_request', String, initialize_request_callback)
         # rospy.Subscriber('holocontrol/waypoint_pose_stamped', PoseStamped, waypoint_pose_stamp_callback)
-        path_planning_service = '/move_base/make_plan'
-        #path_planning_service = '/move_base/GlobalPlanner/make_plan'
+        path_planning_service = '/move_base/MovoGlobalPlanner/make_plan'
         get_plan = rospy.ServiceProxy(path_planning_service, nav_msgs.srv.GetPlan)
         while not rospy.is_shutdown():
             movo.update_pose()
