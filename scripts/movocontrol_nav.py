@@ -6,6 +6,7 @@ import tf
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 from std_msgs.msg import String
 import nav_msgs.srv
+import ros_reality_bridge.srv
 from nav_msgs.msg import Path
 from geometry_msgs.msg import PoseStamped
 
@@ -116,11 +117,14 @@ if __name__ == '__main__':
         movo_plan_publisher = rospy.Publisher('holocontrol/simulated_nav_path', Path, queue_size=1)
         movo_nav_finished_publisher = rospy.Publisher('holocontrol/nav_finished', String, queue_size=1)
         rospy.Subscriber('holocontrol/unity_waypoint_pub', Path, waypoint_callback)
-        path_planning_service = '/move_base/MovoGlobalPlanner/make_plan'
-        rospy.loginfo('Waiting for GetPlan service...')
+        path_planning_service = '/move_base/MovocontrolGlobalPlanner/make_plan'
+        send_plan_service = '/move_base/MovocontrolGlobalPlanner/send_plan'
+        rospy.loginfo('Waiting for services...')
         rospy.wait_for_service(path_planning_service)
-        rospy.loginfo('Got GetPlan service!')
+        rospy.wait_for_service(send_plan_service)
+        rospy.loginfo('Got services!')
         get_plan = rospy.ServiceProxy(path_planning_service, nav_msgs.srv.GetPlan)
+        send_plan = rospy.ServiceProxy(send_plan_service, ros_reality_bridge.srv.SendPlan)
         while not rospy.is_shutdown():
             movo.update_pose()
             movo_pose_publisher.publish('{},{},{}'.format(movo.pose.x, movo.pose.y, movo.pose.theta))
