@@ -75,8 +75,8 @@ def waypoint_callback(data):
     waypoint_path = data
     for pose_stamped in waypoint_path.poses:
         pose_stamped.header.stamp = rospy.Time.now()  # TODO: is this necessary?
-        path_to_execute = generate_navigation_plan(movo.pose_stamped, pose_stamped)
-        print 'path:', path_to_execute
+        path_to_execute = generate_navigation_plan(movo.pose_stamped, pose_stamped).plan
+        print 'path type:', type(path_to_execute)
         # movo_plan_publisher.publish(path_to_visualize)
         # print 'Simulated path published! Num poses:', len(path_to_visualize.poses)
         move2goal(pose_stamped, path_to_execute)
