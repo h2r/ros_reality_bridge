@@ -22,9 +22,7 @@ class MovoTeleop:
     def __init__(self):
         self.rate = rospy.Rate(10)
         self.pose = Pose()
-        # self.curr_state = 'standby'
         self.listener = tf.TransformListener()
-        # self.ready_to_go = False
         self.pose_stamped = None
 
     def update_pose(self):
@@ -49,29 +47,20 @@ class MovoTeleop:
             except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
                 continue
 
-    # def move2goal(self, goal_x, goal_y, goal_theta):
-    #     # assert self.curr_state == 'navigating'
-    #     print 'moving to ({},{},{})'.format(goal_x, goal_y, goal_theta)
-    #     try:
-    #         result = movebase_client(goal_x, goal_y, goal_theta)
-    #         if result:
-    #             rospy.loginfo('Goal execution done!')
-    #     except rospy.ROSInterruptException:
-    #         rospy.loginfo('Navigation got interrupted.')
 
-
-def move2goal(pose_stamped):
+def move2goal(pose_stamped, path_to_execute):
     try:
-        result = movebase_client(pose_stamped)
+        result = movebase_client(pose_stamped, path_to_execute)
         if result:
             rospy.loginfo('Goal execution done!')
     except rospy.ROSInterruptException:
         rospy.loginfo('Navigation got interrupted.')
 
 
-def movebase_client(pose_stamped):
+def movebase_client(pose_stamped, path_to_execute):
     move_base_client.wait_for_server()
     goal = MoveBaseGoal(target_pose=pose_stamped)
+    send_plan(path_to_execute) # TODO: Does this work??
     move_base_client.send_goal(goal)
     wait = move_base_client.wait_for_result()
     if not wait:
@@ -84,14 +73,13 @@ def movebase_client(pose_stamped):
 
 def waypoint_callback(data):
     waypoint_path = data
-    # path_to_visualize = generate_navigation_plan(movo.pose_stamped, waypointPath.poses[0])
     for pose_stamped in waypoint_path.poses:
         pose_stamped.header.stamp = rospy.Time.now()  # TODO: is this necessary?
-        path_to_visualize = generate_navigation_plan(movo.pose_stamped, pose_stamped)
-        # print 'path:', path_to_visualize
+        path_to_execute = generate_navigation_plan(movo.pose_stamped, pose_stamped)
+        print 'path:', path_to_execute
         # movo_plan_publisher.publish(path_to_visualize)
         # print 'Simulated path published! Num poses:', len(path_to_visualize.poses)
-        move2goal(pose_stamped)
+        move2goal(pose_stamped, path_to_execute)
 
 
 def generate_navigation_plan(start, goal, tolerance=0.3):
