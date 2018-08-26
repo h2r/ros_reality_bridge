@@ -7,5 +7,6 @@ std_msgs/String gid
 std_msgs/String prev_id
 std_msgs/String next_id
 std_msgs/String visualize
+std_msgs/String start_gid_sid
 
 

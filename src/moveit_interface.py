@@ -42,7 +42,7 @@ class PlanHandler(object):
     # the desired information
     self.get_prev_id = {} # given gid and sid, stores the sid of the previous gripper in the sequence
     self.get_next_id = {} # stores the sid of the next gripper in the sequence
-    # self.get_angles = {} 
+    self.get_angles = {} 
     self.get_pose = {} # stores the pose (position and quaternion) of the gripper
     self.get_gripper_state = {} # stores the gipper state (1 if open else 0)
     self.get_plan = {} # not used in current version of the code
@@ -109,11 +109,9 @@ class PlanHandler(object):
 
     # case where we are handling a gid we have not seen before
     if gid not in self.get_pose:
-      print gid
       self.network_group(data)
     # case where we have a sid we have not seen before
     if sid not in self.get_pose[gid]:
-      print sid
       self.network_point(data)
     else: # case where we have a sid that we have seen before
       self.get_gripper_state[gid][sid] = data.right_open.data
@@ -121,9 +119,6 @@ class PlanHandler(object):
       self.get_prev_id[gid][sid] = data.prev_id.data
       self.get_next_id[gid][sid] = data.next_id.data
       if data.prev_id.data == 'START':
-        print "------"
-        print sid
-        print "------"
         self.first_movable_point_id[gid] = sid
 
     # visualize is a feild that is true if we want to generate moveit plans to be
@@ -132,28 +127,10 @@ class PlanHandler(object):
     # sids. In this case we do not want to viusalize the plan, but do want to network in
     # all of the points.
     if data.visualize.data == '1':
+      print "visualize!!!!!!!!!!!!"
       waypoints = []
       if gid not in self.first_movable_point_id:
         return
-
-
-
-
-
-
-
-
-      if data.start_gid_sid.data != "":
-        gid_s, sid_s = data.start_gid_sid.data.split()
-        self.set_start_pose(self.get_pose[gid_s][sid_s])
-      else:
-        self.group.set_start_state_to_current_state()
-
-
-
-
-
-
 
       # loop through to get all of the waypoints associated with a group
       curr_id = self.first_movable_point_id[gid]      
@@ -165,8 +142,21 @@ class PlanHandler(object):
 
       # make the moveit plan request to the right arm
       self.group = moveit_commander.MoveGroupCommander('right_arm')
+      if data.start_gid_sid.data != '':
+        gid_s, _ = data.start_gid_sid.data.split()
+        print "GOT HERE"
+        print gid_s
+        if (gid_s not in self.get_angles) or (len(self.get_angles[gid_s]) == 0):
+          assert False
+        self.set_start_pose(self.get_angles[gid_s])
+      else:
+        self.group.set_start_state_to_current_state()
+
       self.group.set_planning_time(10.0)
       (plan, fraction) = self.group.compute_cartesian_path(waypoints, 0.01, 0.0)
+      if len(self.names) == 0:
+        self.names = plan.joint_trajectory.joint_names # populate names field
+      self.get_angles[gid] = plan.joint_trajectory.points[-1].positions
 
     # Old code for when each part (from one waypoint to the next) was planned seperately
     # this might be useful in the future but does not incorporate the notion of gid and
@@ -261,13 +251,13 @@ class PlanHandler(object):
   # Old function to set the start state of joints, no longer used, but could be useful. This would aslo need to be
   # adapted to fit the notion of groups
   
-  def set_start_pose(self, pose):
+  def set_start_pose(self, positions):
     joint_state = JointState()
     joint_state.header = Header()
     joint_state.header.stamp = rospy.Time.now()
     assert len(self.names) != 0
     joint_state.name = self.names
-    joint_state.position = pose.position # TODO: THIS LINE MIGHT NEED TO CHANGE!!!!!
+    joint_state.position = positions # TODO: THIS LINE MIGHT NEED TO CHANGE!!!!!
     moveit_robot_state = RobotState()
     moveit_robot_state.joint_state = joint_state
     self.group.set_start_state(moveit_robot_state)
@@ -308,6 +298,7 @@ class PlanHandler(object):
     self.get_gripper_state[gid] = {} 
     self.get_plan[gid] = {} 
     self.first_movable_point_id[gid] = {} 
+    self.get_angles[gid] = {}
 
   '''
   Helper adapted from the ik_interface.py to check for ik failures
