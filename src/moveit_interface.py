@@ -61,7 +61,7 @@ class PlanHandler(object):
     # self.plan_pub = rospy.Publisher("ros_reality_motion_plan", MoveitPlan, queue_size = 0)
 
     # helper to give the robot the locations of the objects in the scene
-    self.generate_hardcode_locs()
+    self.generate_hardcode_locs2()
 
 
   '''
@@ -79,11 +79,21 @@ class PlanHandler(object):
       self.object_positions.append(seed)
     print self.object_positions
 
+  def generate_hardcode_locs2(self):
+    self.object_positions = []
+    seed = Point()
+    seed.x = 0.769
+    seed.y = .301 
+    seed.z = -0.069
+    self.object_positions.append(seed)
+    print self.object_positions
+
 
   '''
   Callback function used when a plan request is made from the front end
   '''
   def send_plan_request(self, data):
+    # print data
     # saving the gid and the sid associated with the gripper
     sid = data.sid.data
     gid = data.gid.data
@@ -108,6 +118,13 @@ class PlanHandler(object):
     else: # case where we have a sid that we have seen before
       self.get_gripper_state[gid][sid] = data.right_open.data
       self.get_pose[gid][sid] = data.right_arm
+      self.get_prev_id[gid][sid] = data.prev_id.data
+      self.get_next_id[gid][sid] = data.next_id.data
+      if data.prev_id.data == 'START':
+        print "------"
+        print sid
+        print "------"
+        self.first_movable_point_id[gid] = sid
 
     # visualize is a feild that is true if we want to generate moveit plans to be
     # displayed in the frontend. This is true ("1") except when we are making a copy
@@ -119,9 +136,30 @@ class PlanHandler(object):
       if gid not in self.first_movable_point_id:
         return
 
+
+
+
+
+
+
+
+      if data.start_gid_sid.data != "":
+        gid_s, sid_s = data.start_gid_sid.data.split()
+        self.set_start_pose(self.get_pose[gid_s][sid_s])
+      else:
+        self.group.set_start_state_to_current_state()
+
+
+
+
+
+
+
       # loop through to get all of the waypoints associated with a group
       curr_id = self.first_movable_point_id[gid]      
-      while curr_id != None:
+      while curr_id != "":
+        print gid
+        print curr_id
         waypoints.append(copy.deepcopy(self.get_pose[gid][curr_id]))
         curr_id = self.get_next_id[gid][curr_id]
 
@@ -170,7 +208,7 @@ class PlanHandler(object):
     print gids
     for gid in gids:
       curr = self.first_movable_point_id[gid]
-      while curr != None:
+      while curr != "":
         # replan based on waypoints associated with the group
         self.group.set_start_state_to_current_state()
         self.group.set_planning_time(2.0)
@@ -222,18 +260,18 @@ class PlanHandler(object):
 
   # Old function to set the start state of joints, no longer used, but could be useful. This would aslo need to be
   # adapted to fit the notion of groups
-  '''
-  def set_start_pose(self, id_data):
+  
+  def set_start_pose(self, pose):
     joint_state = JointState()
     joint_state.header = Header()
     joint_state.header.stamp = rospy.Time.now()
     assert len(self.names) != 0
     joint_state.name = self.names
-    joint_state.position = self.get_angles[id_data]
+    joint_state.position = pose.position # TODO: THIS LINE MIGHT NEED TO CHANGE!!!!!
     moveit_robot_state = RobotState()
     moveit_robot_state.joint_state = joint_state
     self.group.set_start_state(moveit_robot_state)
-  '''
+  
 
   '''
   Helper to add a new waypoint (sid) to the dicts
@@ -256,7 +294,7 @@ class PlanHandler(object):
       self.get_prev_id[gid][data.next_id.data] = sid
       self.get_next_id[gid][sid] = data.next_id.data
     else:
-      self.get_next_id[gid][sid] = None
+      self.get_next_id[gid][sid] = ""
 
 
   '''
