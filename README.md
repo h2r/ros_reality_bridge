@@ -1,3 +1,5 @@
+# NOTE: This repo is maintained for use with some legacy code within the lab, but our new VR/AR projects are based on Ros-Sharp, an open-source Unity/ROS connector developed by Siemens. Their main GitHub page is [here](https://github.com/siemens/ros-sharp), and a fork we maintain that allows use with the HoloLens is [here](https://github.com/dwhit/ros-sharp)
+
 # ROS REALITY BRIDGE
 
 Hi, and welcome to ROS Reality Bridge, a virtual reality teleoperation interface for ROS enabled robots (we use a Baxter, but the code could easily be modified for any ROS robot). This readme contains all the information you need to get started.
