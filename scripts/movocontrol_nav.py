@@ -50,6 +50,7 @@ class MovoTeleop:
 
 def move2goal(pose_stamped, path_to_execute):
     try:
+        print 'move2goal entered'
         result = movebase_client(pose_stamped, path_to_execute)
         if result:
             rospy.loginfo('Goal execution done!')
@@ -58,10 +59,12 @@ def move2goal(pose_stamped, path_to_execute):
 
 
 def movebase_client(pose_stamped, path_to_execute):
+    print 'waiting for server...'
     move_base_client.wait_for_server()
     goal = MoveBaseGoal(target_pose=pose_stamped)
-    send_plan(path_to_execute) # TODO: Does this work??
+    #send_plan(path_to_execute) # TODO: Does this work??
     move_base_client.send_goal(goal)
+    print 'Goal sent!'
     wait = move_base_client.wait_for_result()
     if not wait:
         rospy.logerr("Action server not available!")
