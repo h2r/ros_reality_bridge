@@ -1,7 +1,7 @@
 <launch>
 <include file="$(find rosbridge_server)/launch/rosbridge_websocket.launch" />
 <include file="$(find ros_reality_bridge)/launch/nav/movocontrol_map_nav.launch">
-	<arg name="map_file" value="cit219renovated" />
+	<arg name="map_file" value="newlab" />
 </include>
 <include file="$(find movo_viz)/launch/view_robot.launch">
 	<arg name="function" value="map_nav" />

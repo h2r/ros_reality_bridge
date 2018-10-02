@@ -1,7 +1,7 @@
 <launch>
 <include file="$(find rosbridge_server)/launch/rosbridge_websocket.launch" />
 <include file="$(find movo_demos)/launch/nav/map_nav.launch">
-	<arg name="map_file" value="cit219renovated" />
+	<arg name="map_file" value="newlab" />
 </include>
 <node name="movo_controller" pkg="ros_reality_bridge" type="movocontrol_nav.py" output="screen"/>
 </launch>
