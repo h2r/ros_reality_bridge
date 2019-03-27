@@ -9,6 +9,7 @@ import nav_msgs.srv
 import ros_reality_bridge.srv
 from nav_msgs.msg import Path
 from geometry_msgs.msg import PoseStamped
+from rostopic import get_topic_type
 
 
 class Pose:
@@ -100,13 +101,15 @@ def generate_navigation_plan(start, goal, tolerance=0.3):
 
 if __name__ == '__main__':
     try:
-        listener = tf.TransformListener()
         rospy.init_node('movo_controller', anonymous=True)
+        listener = tf.TransformListener()
         movo = MovoTeleop()
         move_base_client = actionlib.SimpleActionClient('movo_move_base', MoveBaseAction)
         movo_pose_publisher = rospy.Publisher('holocontrol/ros_movo_pose_pub', String, queue_size=0)
         movo_plan_publisher = rospy.Publisher('holocontrol/simulated_nav_path', Path, queue_size=1)
         movo_nav_finished_publisher = rospy.Publisher('holocontrol/nav_finished', String, queue_size=1)
+        topic_type = get_topic_type('holocontrol/unity_waypoint_pub')[0]
+        print 'TOPIC TYPE:', topic_type
         rospy.Subscriber('holocontrol/unity_waypoint_pub', Path, waypoint_callback)
         path_planning_service = '/move_base/MovocontrolGlobalPlanner/make_plan'
         send_plan_service = '/move_base/MovocontrolGlobalPlanner/send_plan'
