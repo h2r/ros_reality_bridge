@@ -7,8 +7,8 @@ from moveit_msgs.msg import RobotTrajectory
 from ros_reality_bridge.msg import MoveitTarget
 from std_msgs.msg import String
 import actionlib
-
 from control_msgs.msg import GripperCommandAction, GripperCommandGoal
+from ar_track_alvar_msgs.msg import AlvarMarkers
 
 
 class GripperActionPlanner(object):
@@ -113,8 +113,8 @@ class ArmPlanner(object):
         :type goal_pose_left: geometry_msgs.msg.PoseStamped
         :type goal_pose_right: geometry_msgs.msg.PoseStamped
         """
-        assert isinstance(goal_pose_left, geometry_msgs.msg.PoseStamped)
-        assert isinstance(goal_pose_right, geometry_msgs.msg.PoseStamped)
+        #assert isinstance(goal_pose_left, geometry_msgs.msg.PoseStamped)
+        #assert isinstance(goal_pose_right, geometry_msgs.msg.PoseStamped)
         if goal_pose_left is None and goal_pose_right is None:
             return
         if goal_pose_left is not None:
@@ -138,6 +138,7 @@ class ArmPlanner(object):
         print 'generating identity plan...'
         pose_right = self.get_pose_right_arm()
         pose_left = self.get_pose_left_arm()
+        print 'LEFT POSE:', self.get_pose_left_arm()
         plan = self.generate_plan(goal_pose_left=pose_left, goal_pose_right=pose_right)
         if execute:
             print 'execute status:', self.execute_plan(plan)
@@ -182,12 +183,56 @@ def left_gripper_callback(data):
     leftGripper.wait()
     print 'Gripper command result:', leftGripper.result()
 
+def ar_tag_callback(data):
+    frame = data.header.frame_id
+    print 'frame:', frame
+
+def generate_pose(x, y, z, qx, qy, qz, qw):
+    pose = PoseStamped()
+    pose.header.stamp = rospy.Time.now()
+    pose.header.frame_id = 'odom'
+    pose.pose.position.x = x
+    pose.pose.position.y = y
+    pose.pose.position.z = z
+    pose.pose.orientation.x = qx
+    pose.pose.orientation.y = qy
+    pose.pose.orientation.z = qz
+    pose.pose.orientation.qw = qw
+    return pose
+
 
 if __name__ == '__main__':
     rospy.Subscriber('/holocontrol/identity_pose_request', String, identity_pose_request_callback)
     rospy.Subscriber('/holocontrol/right_gripper_command', String, right_gripper_callback)
     rospy.Subscriber('/holocontrol/left_gripper_command', String, left_gripper_callback)
+    #rospy.Subscriber('/ar_pose_marker', AlvarMarkers, ar_tag_callback)
     armPlanner = ArmPlanner()
     rightGripper = GripperActionPlanner("right")
     leftGripper = GripperActionPlanner("left")
+    pub = rospy.Publisher('/holocontrol/right_gripper_command', String, queue_size=1)
+
+    pose = PoseStamped()
+    pose.header.stamp = rospy.Time.now()
+    pose.header.frame_id = "odom"
+    pose.pose.position.x = 0.416
+    pose.pose.position.y = 0.098
+    pose.pose.position.z = 0.981
+    pose.pose.orientation.x = -0.589925424283
+    pose.pose.orientation.y = -0.384930152782
+    pose.pose.orientation.z = -0.646647245863
+    pose.pose.orientation.w = 0.292684319159
+
+    open_state = True
+    import time
+    start = time.time()
+    while True:
+        if time.time() - start > 10:
+            start = time.time()
+            if open_state:
+                print 'opening...'
+                pub.publish(String('open'))
+            else:
+                print 'closing...'
+                pub.publish(String('close'))
+            open_state = not open_state
     rospy.spin()
