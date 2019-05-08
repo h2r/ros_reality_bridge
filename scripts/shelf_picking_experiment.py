@@ -12,49 +12,13 @@ from control_msgs.msg import GripperCommandAction, GripperCommandGoal
 from ar_track_alvar_msgs.msg import AlvarMarkers
 import tf
 import numpy as np
-
-
-class GripperActionPlanner(object):
-    def __init__(self, prefix="right"):
-        self._prefix = prefix
-        self._client = actionlib.SimpleActionClient(
-            '/movo/%s_gripper_controller/gripper_cmd' % self._prefix,
-            GripperCommandAction,
-        )
-        self._goal = GripperCommandGoal()
-        server_up = self._client.wait_for_server(timeout=rospy.Duration(10))
-        if not server_up:
-            rospy.logerr("Timed out waiting for Gripper Command"
-                         " Action Server to connect. Start the action server"
-                         " before running example.")
-            rospy.signal_shutdown("Timed out waiting for Action Server")
-            sys.exit(1)
-        self.clear()
-
-    def command(self, position, block=False, timeout=15):
-        self._goal.command.position = position
-        self._goal.command.max_effort = -1.0
-        self._client.send_goal(self._goal)
-        if block:
-            self._client.wait_for_result(timeout=rospy.Duration(timeout))
-
-    def stop(self):
-        self._client.cancel_goal()
-
-    def wait(self, timeout=15):
-        self._client.wait_for_result(timeout=rospy.Duration(timeout))
-
-    def result(self):
-        return self._client.get_result()
-
-    def clear(self):
-        self._goal = GripperCommandGoal()
+import random
 
 
 class ArmPlanner(object):
     def __init__(self):
         moveit_commander.roscpp_initialize(sys.argv)
-        rospy.init_node('movo_moveit_node', anonymous=True)
+        #rospy.init_node('movo_moveit_node', anonymous=True)
         self.robot = moveit_commander.RobotCommander()
         self.group_arms = moveit_commander.MoveGroupCommander('upper_body')
         print 'planning frame:', self.group_arms.get_planning_frame()
@@ -67,7 +31,6 @@ class ArmPlanner(object):
         rospy.Subscriber('/ros_reality/move_to_goal', String, self.execute_goal_callback, queue_size=1)
         self.plan_to_execute = None
         self.planning = False
-        #self.generate_identity_plan()
 
     def print_initializer_msgs(self):
         print "================ Robot Groups ==============="
@@ -116,8 +79,6 @@ class ArmPlanner(object):
         :type goal_pose_left: geometry_msgs.msg.PoseStamped
         :type goal_pose_right: geometry_msgs.msg.PoseStamped
         """
-        #assert isinstance(goal_pose_left, geometry_msgs.msg.PoseStamped)
-        #assert isinstance(goal_pose_right, geometry_msgs.msg.PoseStamped)
         if goal_pose_left is None and goal_pose_right is None:
             return
         if goal_pose_left is not None:
@@ -128,7 +89,6 @@ class ArmPlanner(object):
         plan = self.group_arms.plan()
         if not plan.joint_trajectory.joint_names:  # empty list means failed plan
             print 'Plan failed! :('
-            self.generate_identity_plan(execute=False)
             return
         self.plan_publisher.publish(plan)
         return plan
@@ -159,12 +119,7 @@ class ArmPlanner(object):
             return False
         assert isinstance(plan, RobotTrajectory)
         success = self.group_arms.execute(plan)
-        #self.generate_identity_plan(execute=False)
         return success
-
-
-def identity_pose_request_callback(data):
-    armPlanner.generate_identity_plan(execute=False)
 
 
 def right_gripper_callback(data):
@@ -235,7 +190,7 @@ def dump_cup():
     plan = group.plan()
     return armPlanner.execute_plan(plan)
 
-def move_home():
+def gohome():
     global upright_orientation, armPlanner
     joints = [0.0246072206646204, 1.5699611594770477, 1.3755988694331027, -0.40243985970179796, 2.6155155402810664, 0.024652774019944257, -0.4529352581824634, 1.736052130337038, 0.02641536109149456, -0.030099578201770782, -2.6349187993511656, 1.393446309794378, 2.9582854115468766, -1.6660002078655398, -3.0842920795756488, 0.01734649976023112, 0.7757197033638823]
     armPlanner.group_arms.set_joint_value_target(joints)
@@ -250,7 +205,7 @@ def move_home():
 
 def pose1():
     global upright_orientation, armPlanner
-    position = [0.9, 0.0, 1.0]
+    position = [0.9, -0.1, 1.0]
     pose = generate_pose(position, upright_orientation)
     plan = armPlanner.generate_plan(None, pose)
     if not armPlanner.execute_plan(plan):
@@ -258,32 +213,67 @@ def pose1():
 
 def pose2():
     global upright_orientation, armPlanner
-    position = [0.9, 0.3, 1.0]
+    position = [0.9, 0.2, 1.0]
     pose = generate_pose(position, upright_orientation)
     plan = armPlanner.generate_plan(None, pose)
     if not armPlanner.execute_plan(plan):
         print 'pose2 failed!'
 
+def generate_coords(num_objects):
+    global all_coords
+    coords = random.sample(all_coords, num_objects)
+    return coords
+
+def generate_all_coords():
+    shelves = 4
+    rows = 3
+    cols = 15
+    coords = []
+    for s in xrange(shelves):
+        for r in xrange(rows):
+            for c in xrange(cols):
+                coords.append('{},{},{}'.format(s, r, c))
+    return coords
+
 
 if __name__ == '__main__':
-    rospy.Subscriber('/holocontrol/identity_pose_request', String, identity_pose_request_callback)
-    rospy.Subscriber('/holocontrol/right_gripper_command', String, right_gripper_callback)
-    rospy.Subscriber('/holocontrol/left_gripper_command', String, left_gripper_callback)
-    global armPlanner
-    armPlanner = ArmPlanner()
-    rightGripper = GripperActionPlanner("right")
-    leftGripper = GripperActionPlanner("left")
-
-    global upright_orientation, dump_orientation
+    global all_coords, armPlanner, upright_orientation, dump_orientation
+    all_coords = generate_all_coords()
     upright_orientation = [-0.980485293277, -0.15731597732, -0.00049072175508, 0.117898397529]
     dump_orientation = [-0.195536322278, -0.0479014920223, 0.160869170862, 0.966225700133]
+    #armPlanner = ArmPlanner()
+    rospy.init_node('movo_shelf_experiment_node')
+    coord_publisher = rospy.Publisher('holocontrol/shelf_coords', String, queue_size=0)
+    print 'waiting for connection...'
+    while coord_publisher.get_num_connections() == 0:
+        rospy.sleep(1)
+    print 'connection obtained!'
+
+    NUM_TRIALS = 1
+    NUM_TO_PICK = 10
+    for trial_num, trial in enumerate(xrange(NUM_TRIALS)):
+        coords = generate_coords(NUM_TO_PICK)
+        print 'Coordinates generated!'
+        status = raw_input('Press any key to begin trial {}/{}.'.format(trial_num+1, NUM_TRIALS))
+        for i, c in enumerate(coords):
+            print 'Picking object {}/{}'.format(i+1, len(coords))
+            print 'coord: ({})'.format(c)
+            coord_publisher.publish(c)
+            print 'published', c
+            # Wait for subject to pick the item.
+            if (i < 9):
+                status = raw_input('Press enter to continue, or type quit to exit: ')
+                if status.lower() == 'quit':
+                    sys.exit(1)
+        print 'Trials complete!'
+
+    #gohome()
+    #pose1()
+    #pose2()
+    ##dump_cup()
+    #gohome()
+
 
     #while True:
     #    joints = armPlanner.group_arms.get_current_joint_values()
     #    print joints
-
-    move_home()
-    pose1()
-    pose2()
-    dump_cup()
-    move_home()
