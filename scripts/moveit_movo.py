@@ -276,7 +276,7 @@ if __name__ == '__main__':
 
     global upright_orientation, dump_orientation
     upright_orientation = [-0.980485293277, -0.15731597732, -0.00049072175508, 0.117898397529]
-    dump_orientation = [-0.195536322278, -0.0479014920223, 0.160869170862, 0.966225700133]
+    #dump_orientation = [-0.195536322278, -0.0479014920223, 0.160869170862, 0.966225700133]
 
     #while True:
     #    joints = armPlanner.group_arms.get_current_joint_values()

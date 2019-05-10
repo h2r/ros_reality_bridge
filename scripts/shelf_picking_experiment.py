@@ -240,8 +240,8 @@ if __name__ == '__main__':
     global all_coords, armPlanner, upright_orientation, dump_orientation
     all_coords = generate_all_coords()
     upright_orientation = [-0.980485293277, -0.15731597732, -0.00049072175508, 0.117898397529]
-    dump_orientation = [-0.195536322278, -0.0479014920223, 0.160869170862, 0.966225700133]
-    #armPlanner = ArmPlanner()
+    #dump_orientation = [-0.195536322278, -0.0479014920223, 0.160869170862, 0.966225700133]
+    armPlanner = ArmPlanner()
     rospy.init_node('movo_shelf_experiment_node')
     coord_publisher = rospy.Publisher('holocontrol/shelf_coords', String, queue_size=0)
     print 'waiting for connection...'
@@ -270,7 +270,7 @@ if __name__ == '__main__':
     #gohome()
     #pose1()
     #pose2()
-    ##dump_cup()
+    #dump_cup()
     #gohome()
 
 
